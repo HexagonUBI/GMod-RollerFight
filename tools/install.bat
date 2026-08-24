@@ -14,6 +14,8 @@ set "GMODDIR="
 set "ASSUMEYES="
 set "ACTION=install"
 set "INTERACTIVE=1"
+set "RFSTATUS=skipped"
+set "RPCSTATUS=not installed"
 
 :parseargs
 if "%~1"=="" goto parsed
@@ -41,6 +43,7 @@ set "ADDON=!GAMEDIR!\addons\rollerfight"
 set "BINDIR=!GAMEDIR!\lua\bin"
 set "HAVELOCAL="
 if exist "!ROOT!\gamemodes\rollerfight\rollerfight.txt" set "HAVELOCAL=1"
+if exist "!ADDON!\gamemodes\rollerfight\rollerfight.txt" set "RFSTATUS=installed (already present)"
 
 echo  GarrysMod : !GMODDIR!
 if defined HAVELOCAL echo  Source    : this folder ^(!ROOT!^)
@@ -78,11 +81,19 @@ if defined FOUND (
 )
 
 echo.
-echo  ------------------------------
-echo   Done.
-echo   In game:  gamemode rollerfight
-echo             map phys_dmm_house_r
-echo  ------------------------------
+echo  ==============================
+echo   RollerFight : !RFSTATUS!
+echo   Discord RPC : !RPCSTATUS!
+echo  ==============================
+echo.
+if /i "!RFSTATUS:~0,9!"=="installed" (
+    echo   Ready. Launch GarrysMod, pick RollerFight in the
+    echo   gamemode list at the bottom right, then load a map.
+    echo   Console:  map phys_dmm_house_r
+) else (
+    echo   RollerFight was NOT installed. Run again and answer Y.
+)
+echo.
 goto finish
 
 
@@ -141,9 +152,11 @@ if exist "!ADDON!" (
     fsutil reparsepoint query "!ADDON!" >nul 2>&1
     if errorlevel 1 (
         echo  WARNING: "!ADDON!" is a real folder, not a link. Leaving it alone.
+        set "RFSTATUS=left alone, folder is not a link"
         exit /b 0
     )
-    echo  Link already present.
+    echo  Already linked, nothing to do.
+    set "RFSTATUS=installed (linked to !ROOT!)"
     exit /b 0
 )
 if not exist "!GAMEDIR!\addons\" mkdir "!GAMEDIR!\addons" >nul 2>&1
@@ -154,6 +167,7 @@ if errorlevel 1 (
     exit /b 1
 )
 echo  Linked into GarrysMod.
+set "RFSTATUS=installed (linked to !ROOT!)"
 exit /b 0
 
 
@@ -196,6 +210,7 @@ if not exist "!ADDON!\" mkdir "!ADDON!" >nul 2>&1
 xcopy "!SRC!\gamemodes" "!ADDON!\gamemodes\" /E /I /Y /Q >nul
 if exist "!SRC!\addon.json" copy /y "!SRC!\addon.json" "!ADDON!\addon.json" >nul
 echo  Installed into !ADDON!
+set "RFSTATUS=installed (downloaded from GitHub)"
 
 rmdir /s /q "!WORK!" >nul 2>&1
 exit /b 0
@@ -215,21 +230,15 @@ for %%M in (%MODULES%) do (
             copy /y "!WORK!\%%M" "!BINDIR!\%%M" >nul
             echo  Installed %%M into lua\bin
             set "GOTMODULE=1"
+            set "RPCSTATUS=installed (%%M)"
         )
     )
 )
 
 if not defined GOTMODULE (
-    echo.
-    echo  No module published at %MODULE_DIR%
-    echo.
-    echo  Discord presence needs a client binary module, there is no pure Lua route.
-    echo  Put one of these in a "binaries" folder in the repo and this will pick it up:
-    for %%M in (%MODULES%) do echo      binaries/%%M
-    echo.
-    echo  Or install one you already have:
-    echo      install.bat /gmod "!GMODDIR!"   then copy the dll into
-    echo      !BINDIR!
+    echo  Nothing published in the repo's binaries folder yet.
+    echo  This one is optional, everything else works without it.
+    set "RPCSTATUS=not available yet, optional"
 )
 
 rmdir /s /q "!WORK!" >nul 2>&1
