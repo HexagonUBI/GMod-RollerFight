@@ -71,6 +71,7 @@ local function BuildScores(parent)
 
 	local list = page:Add("DScrollPanel")
 	list:Dock(FILL)
+	list:DockMargin(0, 0, 0, 0)
 
 	local ROW, GAP = 46, 3
 
@@ -78,7 +79,7 @@ local function BuildScores(parent)
 		list:Clear()
 
 		local canvas = list:GetCanvas()
-		local width = math.max(200, list:GetWide() - 18)
+		local width = RF.ListWidth(list, 2)
 		local players = Sorted()
 
 		canvas:SetTall(#players * (ROW + GAP))
@@ -137,7 +138,7 @@ local function BuildScores(parent)
 
 		self.Stamp = stamp
 		self.Next = CurTime() + 1
-		self.Rebuild()
+		RF.DeferRebuild(self)
 	end
 
 	local back = page:Add("DButton")

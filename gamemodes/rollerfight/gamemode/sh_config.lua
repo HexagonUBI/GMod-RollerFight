@@ -8,6 +8,16 @@ RF.GlowTexture = "models/roller/rollermine_glow"
 RF.DeathColor = Color(255, 55, 45)
 RF.MineRadius = 12.56
 
+RF.BodyBias = Vector(0.49, 0.93, 1.00)
+RF.GlowBias = Vector(0.45, 0.95, 1.00)
+
+RF.Diggable = {
+	[MAT_DIRT] = true,
+	[MAT_SAND] = true,
+	[MAT_GRASS] = true,
+	[MAT_SNOW] = true
+}
+
 local r = RF.MineRadius
 local ring = r * 0.6
 local ringDepth = math.sqrt(r * r - ring * ring)
@@ -102,9 +112,10 @@ RF.VarList = {
 	{ key = "DashCooldown", group = "Physics", label = "Dash Cooldown", default = 1.4, min = 0, max = 10 },
 	{ key = "Traction", group = "Physics", label = "Traction On Slippery Ground", default = 3, min = 0, max = 30 },
 	{ key = "TractionSlip", group = "Physics", label = "Slip Before Traction Helps", default = 25, min = 1, max = 400 },
-	{ key = "GroundSlack", group = "Physics", label = "Ground Contact Slack", default = 4, min = 0.5, max = 24 },
-	{ key = "ContactMemory", group = "Physics", label = "Contact Memory Seconds", default = 0.35, min = 0.05, max = 2 },
-	{ key = "ContactDot", group = "Physics", label = "Contact Must Point Down", default = 0.45, min = 0, max = 1 },
+	{ key = "GroundSlack", group = "Physics", label = "Ground Contact Slack", default = 2, min = 0.5, max = 24 },
+	{ key = "ContactMemory", group = "Physics", label = "Contact Memory Seconds", default = 0.12, min = 0.02, max = 2 },
+	{ key = "ContactDot", group = "Physics", label = "Contact Must Point Down", default = 0.7, min = 0, max = 1 },
+	{ key = "JumpRiseGate", group = "Physics", label = "Block Jump Above Rise Speed", default = 60, min = 0, max = 600 },
 	{ key = "Debug", group = "Physics", label = "Show Debug Readout", default = 0, min = 0, max = 1, realm = "client" },
 	{ key = "GroundBrake", group = "Physics", label = "Ground Brake When Idle", default = 0, min = 0, max = 8 },
 
@@ -151,6 +162,7 @@ RF.VarList = {
 	{ key = "RoundTime", group = "Round", label = "Round Length", default = 300, min = 30, max = 3600 },
 	{ key = "ScoreLimit", group = "Round", label = "Score Limit (0 off)", default = 15, min = 0, max = 200 },
 	{ key = "AutoStartTime", group = "Round", label = "Auto Start Countdown", default = 30, min = 5, max = 300 },
+	{ key = "AllReadyTime", group = "Round", label = "Countdown When All Ready", default = 15, min = 3, max = 120 },
 	{ key = "MinPlayers", group = "Round", label = "Players Needed To Start", default = 1, min = 1, max = 32 },
 	{ key = "CleanupMap", group = "Round", label = "Clean Map Each Round", default = 1, min = 0, max = 1 },
 	{ key = "IntermissionTime", group = "Round", label = "Intermission Length", default = 8, min = 2, max = 30 },

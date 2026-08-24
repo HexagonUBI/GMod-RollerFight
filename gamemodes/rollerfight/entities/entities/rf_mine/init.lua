@@ -193,6 +193,8 @@ function ENT:TryJump()
 	local phys = self:GetPhysicsObject()
 	if not IsValid(phys) then return end
 
+	if phys:GetVelocity().z > RF.Get("JumpRiseGate") then return end
+
 	local mode = RF.GetMoveMode()
 
 	self.NextJump = CurTime() + RF.Get("JumpCooldown")
@@ -278,6 +280,8 @@ function ENT:DriveRoll()
 	local moving = not wish:IsZero()
 
 	if moving then
+		if phys:IsAsleep() then phys:Wake() end
+
 		mode.Drive(self, phys, wish)
 		RF.ApplyTraction(self, phys, wish)
 	else
@@ -333,9 +337,6 @@ function ENT:Think()
 	if not IsValid(driver) then return true end
 
 	if RF.EnforceDetached then RF.EnforceDetached(driver) end
-
-	local phys = self:GetPhysicsObject()
-	if IsValid(phys) and phys:IsAsleep() then phys:Wake() end
 
 	if not self:GetBuried() and not self.Detonating and not self:GetLocked() then
 		self:UpdateGround()

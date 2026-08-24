@@ -38,6 +38,29 @@ function RF.Outline(x, y, w, h, col)
 	surface.DrawOutlinedRect(x, y, w, h)
 end
 
+function RF.ListWidth(list, pad)
+	local width = list:GetWide() - (pad or 0)
+
+	if IsValid(list.VBar) and list.VBar:IsVisible() then
+		width = width - list.VBar:GetWide()
+	end
+
+	return math.max(120, width)
+end
+
+function RF.DeferRebuild(list)
+	if list.Queued then return end
+
+	list.Queued = true
+
+	timer.Simple(0, function()
+		if not IsValid(list) then return end
+
+		list.Queued = false
+		list.Rebuild()
+	end)
+end
+
 function RF.StyleButton(btn, accent)
 	btn:SetFont("RFHead")
 	btn:SetTextColor(U.TEXT)
@@ -137,10 +160,8 @@ end
 function RF.PlayerCard(parent, ply, tall)
 	tall = tall or 54
 
-	local row = parent:Add("DPanel")
-	row:Dock(TOP)
+	local row = vgui.Create("DPanel", parent)
 	row:SetTall(tall)
-	row:DockMargin(0, 0, 0, 5)
 	row:SetMouseInputEnabled(true)
 
 	local size = tall - 16
@@ -215,23 +236,31 @@ local function BuildPlayers(parent)
 	list:Dock(FILL)
 	list:DockMargin(8, 30, 8, 8)
 
+	local ROW, GAP = 54, 5
+
 	list.Rebuild = function()
 		list:Clear()
 
-		for _, ply in ipairs(player.GetAll()) do
-			PlayerRow(list, ply)
+		local canvas = list:GetCanvas()
+		local width = RF.ListWidth(list, 2)
+		local players = player.GetAll()
+
+		canvas:SetTall(#players * (ROW + GAP))
+
+		for index, ply in ipairs(players) do
+			local row = RF.PlayerCard(canvas, ply, ROW)
+			row:SetSize(width, ROW)
+			row:SetPos(0, (index - 1) * (ROW + GAP))
 		end
 	end
 
-	list.Rebuild()
-
 	list.Think = function(self)
-		local stamp = #player.GetAll()
+		local stamp = #player.GetAll() .. "x" .. self:GetWide()
 
-		if self.Stamp ~= stamp then
-			self.Stamp = stamp
-			self.Rebuild()
-		end
+		if self.Stamp == stamp then return end
+
+		self.Stamp = stamp
+		RF.DeferRebuild(self)
 	end
 
 	return wrap
@@ -385,13 +414,19 @@ function Lobby.Open()
 	Panel:MakePopup()
 	Panel:SetKeyboardInputEnabled(false)
 
+	Panel:SetPopupStayAtBack(true)
+
 	Panel.Think = function(self)
-		self:SetVisible(not gui.IsGameUIVisible())
+		local paused = gui.IsGameUIVisible()
+
+		if self.Paused ~= paused then
+			self.Paused = paused
+			self:SetMouseInputEnabled(not paused)
+			self:SetKeyboardInputEnabled(false)
+		end
 	end
 
 	Panel.Paint = function(self, pw, ph)
-		if gui.IsGameUIVisible() then return end
-
 		RF.Box(0, 0, pw, ph, U.BG)
 		RF.Outline(0, 0, pw, ph, U.LINE)
 		RF.Box(0, 0, pw, 34, U.HEAD)

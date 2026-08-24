@@ -326,8 +326,13 @@ local function Tick()
 			return
 		end
 
+		local want = (ready >= total) and RF.Get("AllReadyTime") or RF.Get("AutoStartTime")
+		local left = autoAt - CurTime()
+
 		if autoAt <= 0 then
-			SetGlobalFloat("rf_autostart", CurTime() + RF.Get("AutoStartTime"))
+			SetGlobalFloat("rf_autostart", CurTime() + want)
+		elseif left > want then
+			SetGlobalFloat("rf_autostart", CurTime() + want)
 		elseif CurTime() >= autoAt then
 			SetGlobalFloat("rf_autostart", 0)
 			RF.EnterIntermission()
