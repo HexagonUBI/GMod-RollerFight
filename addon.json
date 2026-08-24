@@ -8,6 +8,7 @@
 		".gitattributes",
 		"dev-notes/*",
 		"tools/*",
+		"binaries/*",
 		"README.md"
 	]
 }
