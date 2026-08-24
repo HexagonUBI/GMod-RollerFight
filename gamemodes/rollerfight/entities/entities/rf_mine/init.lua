@@ -1,0 +1,449 @@
+AddCSLuaFile("cl_init.lua")
+AddCSLuaFile("shared.lua")
+
+include("shared.lua")
+
+function ENT:Initialize()
+	self:SetModel(RF.MineModel)
+	self:PhysicsInit(SOLID_VPHYSICS)
+	self:SetMoveType(MOVETYPE_VPHYSICS)
+	self:SetSolid(SOLID_VPHYSICS)
+	self:SetCollisionGroup(COLLISION_GROUP_NONE)
+
+	self:RefreshRadius()
+	self.RFInput = { Forward = 0, Side = 0, Yaw = 0, Pitch = 0 }
+	self.LastButtons = 0
+	self.Sprinting = false
+	self.Grounded = false
+	self.HitTimes = {}
+	self.LastThink = CurTime()
+
+	self:SetEnergy(RF.Get("MaxEnergy"))
+	self:SetAttackMode(false)
+	self:SetExhausted(false)
+	self:SetBuried(false)
+	self:SetAttackLockEnd(0)
+	self:SetHealth(RF.Get("MineHealth"))
+	self:SetMaxHealth(RF.Get("MineHealth"))
+
+	local phys = self:GetPhysicsObject()
+	if IsValid(phys) then
+		phys:SetMass(RF.Get("MineMass"))
+		phys:EnableDrag(false)
+		phys:Wake()
+	end
+
+	self:NextThink(CurTime())
+end
+
+function ENT:RefreshRadius()
+	local maxs = self:OBBMaxs()
+	self.Radius = math.max(maxs.x, maxs.y, maxs.z)
+
+	local phys = self:GetPhysicsObject()
+
+	if IsValid(phys) then
+		local pmins, pmaxs = phys:GetAABB()
+		self.PhysRadius = math.max(pmaxs.x - pmins.x, pmaxs.y - pmins.y, pmaxs.z - pmins.z) * 0.5
+	else
+		self.PhysRadius = self.Radius
+	end
+end
+
+function ENT:ReadCommand(cmd)
+	if self.Detonating then return end
+
+	local buttons = cmd:GetButtons()
+	local pressed = bit.band(buttons, bit.bnot(self.LastButtons))
+	local eye = cmd:GetViewAngles()
+
+	self.RFInput.Forward = cmd:GetForwardMove()
+	self.RFInput.Side = cmd:GetSideMove()
+	self.RFInput.Yaw = eye.y
+	self.RFInput.Pitch = math.Clamp(eye.p, -35, 35)
+	self.Sprinting = bit.band(buttons, IN_SPEED) ~= 0 and not self:GetExhausted()
+
+	if bit.band(pressed, IN_JUMP) ~= 0 then self:TryJump() end
+	if bit.band(pressed, IN_ATTACK2) ~= 0 then self:TryDash() end
+	if bit.band(pressed, IN_ATTACK) ~= 0 then self:ToggleAttack() end
+	if bit.band(pressed, IN_DUCK) ~= 0 then self:TryBurrow() end
+
+	self.LastButtons = buttons
+end
+
+function ENT:GetWishDirection()
+	if self:GetBuried() then return vector_origin end
+
+	local ang = Angle(0, self.RFInput.Yaw, 0)
+	local wish = ang:Forward() * math.Clamp(self.RFInput.Forward / 400, -1, 1)
+		+ ang:Right() * math.Clamp(self.RFInput.Side / 400, -1, 1)
+
+	wish.z = 0
+	if wish:Length() < 0.05 then return vector_origin end
+
+	wish:Normalize()
+
+	return wish
+end
+
+function ENT:SurfaceTrace()
+	local pos = self:GetPos()
+
+	return util.TraceLine({
+		start = pos,
+		endpos = pos - Vector(0, 0, self.PhysRadius + 8),
+		filter = { self, self:GetDriver() },
+		mask = MASK_SOLID
+	})
+end
+
+function ENT:UpdateGround()
+	local r = self.PhysRadius
+	local width = r * 0.6
+	local pos = self:GetPos()
+
+	local tr = util.TraceHull({
+		start = pos,
+		endpos = pos - Vector(0, 0, r - width + 4),
+		mins = Vector(-width, -width, -width),
+		maxs = Vector(width, width, width),
+		filter = { self, self:GetDriver() },
+		mask = MASK_SOLID
+	})
+
+	self.Grounded = tr.Hit and tr.HitNormal.z > 0.5
+end
+
+function ENT:SetAttack(on)
+	if self:GetAttackMode() == on then return end
+
+	self:SetAttackMode(on)
+	self:SetModel(on and RF.SpikeModel or RF.MineModel)
+	self:RefreshRadius()
+	self:EmitSound(on and "npc/roller/mine/rmine_blades_out1.wav" or "npc/roller/mine/rmine_blades_in1.wav", 75, 100)
+end
+
+function ENT:ToggleAttack()
+	if self:GetBuried() then return end
+
+	if self:GetAttackMode() then
+		self:SetAttack(false)
+		return
+	end
+
+	if self:GetExhausted() then return end
+	if CurTime() < self:GetAttackLockEnd() then return end
+
+	self:SetAttack(true)
+end
+
+function ENT:TryJump()
+	if CurTime() < (self.NextJump or 0) then return end
+
+	if self:GetBuried() then
+		self:Unburrow()
+		return
+	end
+
+	if not self.Grounded then return end
+
+	local phys = self:GetPhysicsObject()
+	if not IsValid(phys) then return end
+
+	self.NextJump = CurTime() + RF.Get("JumpCooldown")
+	phys:ApplyForceCenter(Vector(0, 0, RF.Get("JumpForce")))
+	self:EmitSound("npc/roller/mine/rmine_tossed1.wav", 70, 100)
+end
+
+function ENT:TryDash()
+	if self:GetBuried() then return end
+	if CurTime() < (self.NextDash or 0) then return end
+	if self:GetEnergy() < RF.Get("DashCost") then return end
+
+	local phys = self:GetPhysicsObject()
+	if not IsValid(phys) then return end
+
+	local now = CurTime()
+
+	self.NextDash = now + RF.Get("DashCooldown")
+	self.DashHitUntil = now + RF.Get("DashWindow")
+
+	self:SetEnergy(self:GetEnergy() - RF.Get("DashCost"))
+
+	if self:GetAttackMode() then
+		self.DashAttackUntil = now + RF.Get("DashAttackHold")
+		self.DashLeftGround = false
+	end
+
+	phys:ApplyForceCenter(Angle(self.RFInput.Pitch, self.RFInput.Yaw, 0):Forward() * RF.Get("DashForce"))
+	self:EmitSound("npc/roller/mine/rmine_blip1.wav", 75, 90)
+end
+
+function ENT:TryBurrow()
+	if self:GetBuried() then return end
+	if CurTime() < (self.NextBurrow or 0) then return end
+	if self:GetMoveType() ~= MOVETYPE_VPHYSICS then return end
+
+	local tr = self:SurfaceTrace()
+	if not tr.Hit or not RF.Diggable[tr.MatType] then return end
+
+	local pos = self:GetPos()
+
+	self.NextBurrow = CurTime() + RF.Get("BurrowCooldown")
+	self.BurrowSurface = tr.HitPos.z
+
+	self:SetAttack(false)
+	self:SetBuried(true)
+	self:SetMoveType(MOVETYPE_NONE)
+	self:SetPos(Vector(pos.x, pos.y, tr.HitPos.z + RF.Get("BurrowExposed") - self.Radius))
+	self:EmitSound("npc/roller/mine/combine_mine_deactivate1.wav", 70, 100)
+end
+
+function ENT:Unburrow()
+	if not self:GetBuried() then return end
+
+	self.NextJump = CurTime() + RF.Get("JumpCooldown")
+
+	local pos = self:GetPos()
+	local surface = self.BurrowSurface or pos.z
+
+	self:SetBuried(false)
+	self:SetMoveType(MOVETYPE_VPHYSICS)
+	self:SetPos(Vector(pos.x, pos.y, surface + self.Radius + 4))
+
+	local phys = self:GetPhysicsObject()
+	if IsValid(phys) then
+		phys:Wake()
+		phys:ApplyForceCenter(Vector(0, 0, RF.Get("JumpForce")))
+	end
+
+	self:EmitSound("npc/roller/mine/rmine_predetonate.wav", 75, 100)
+end
+
+function ENT:DriveRoll()
+	local wish = self:GetWishDirection()
+	if wish:IsZero() then return end
+
+	local phys = self:GetPhysicsObject()
+	if not IsValid(phys) then return end
+
+	local sprinting = self.Sprinting and not self:GetExhausted()
+	local cap = sprinting and RF.Get("SprintRotCap") or RF.Get("RotCap")
+	local av = phys:GetAngleVelocity()
+
+	if math.abs(av.x) + math.abs(av.y) + math.abs(av.z) > cap then return end
+
+	local power = sprinting and RF.Get("SprintPower") or RF.Get("RollPower")
+	local center = self:LocalToWorld(phys:GetMassCenter())
+
+	phys:ApplyForceOffset(wish * power, center + Vector(0, 0, 1))
+	phys:ApplyForceOffset(wish * -power, center - Vector(0, 0, 1))
+end
+
+function ENT:UpdateDashAttack()
+	if not self.DashAttackUntil then return end
+
+	if not self.Grounded then self.DashLeftGround = true end
+
+	if CurTime() < self.DashAttackUntil and not (self.DashLeftGround and self.Grounded) then return end
+
+	self.DashAttackUntil = nil
+	self.DashLeftGround = nil
+
+	self:SetAttack(false)
+	self:SetAttackLockEnd(CurTime() + RF.Get("DashAttackLock"))
+end
+
+function ENT:UpdateEnergy(dt)
+	local drain = 0
+
+	if self.Sprinting and self.Grounded and not self:GetWishDirection():IsZero() then drain = drain + RF.Get("SprintDrain") end
+	if self:GetAttackMode() then drain = drain + RF.Get("AttackDrain") end
+
+	if drain > 0 then
+		self:SetEnergy(math.max(0, self:GetEnergy() - drain * dt))
+		self.NextRegen = CurTime() + RF.Get("EnergyRegenDelay")
+	elseif CurTime() >= (self.NextRegen or 0) then
+		self:SetEnergy(math.min(RF.Get("MaxEnergy"), self:GetEnergy() + RF.Get("EnergyRegen") * dt))
+	end
+
+	if self:GetEnergy() <= 0 and not self:GetExhausted() then
+		self:SetExhausted(true)
+		self:SetAttack(false)
+		self.Sprinting = false
+		self:EmitSound("npc/roller/mine/rmine_blip3.wav", 70, 80)
+	elseif self:GetExhausted() and self:GetEnergy() >= RF.Get("ExhaustRecoverAt") then
+		self:SetExhausted(false)
+	end
+end
+
+function ENT:Think()
+	local now = CurTime()
+	local dt = math.min(now - self.LastThink, 0.2)
+	self.LastThink = now
+
+	self:NextThink(now)
+
+	local driver = self:GetDriver()
+	if not IsValid(driver) then return true end
+
+	driver:SetPos(self:GetPos())
+
+	if not self:GetBuried() and not self.Detonating then
+		self:UpdateGround()
+		self:DriveRoll()
+		self:UpdateDashAttack()
+		self:CheckWater()
+	end
+
+	self:UpdateEnergy(dt)
+
+	return true
+end
+
+function ENT:CheckWater()
+	local level = RF.Get("WaterKillLevel")
+	if level <= 0 or self.Detonating then return end
+	if self:WaterLevel() < level then return end
+
+	self:SetHealth(0)
+	self:BeginDetonate(nil)
+end
+
+function ENT:CanHit(other)
+	if not self:GetAttackMode() then return false end
+	if self:GetBuried() then return false end
+	if not IsValid(other) or other:GetClass() ~= "rf_mine" then return false end
+	if other:GetBuried() then return false end
+
+	if RF.Get("FriendlyFire") < 1 then
+		local ours, theirs = self:GetMineTeam(), other:GetMineTeam()
+		if ours == theirs and ours ~= TEAM_FREE then return false end
+	end
+
+	return true
+end
+
+function ENT:HitMine(other, pos)
+	local now = CurTime()
+	if (self.HitTimes[other] or 0) > now then return end
+
+	self.HitTimes[other] = now + RF.Get("HitCooldown")
+
+	local dashing = now < (self.DashHitUntil or 0)
+	local dir = other:GetPos() - self:GetPos()
+	dir.z = 0
+	dir:Normalize()
+
+	local speed = self:GetVelocity():Length()
+	local ramp = 1 + math.Clamp(speed / math.max(1, RF.Get("SpeedDamageRef")), 0, 1) * RF.Get("SpeedDamageBonus")
+	local base = dashing and RF.Get("DashDamage") or RF.Get("HitDamage")
+
+	local dmg = DamageInfo()
+	dmg:SetDamage(base * ramp)
+	dmg:SetDamageType(DMG_SHOCK)
+	dmg:SetInflictor(self)
+	dmg:SetAttacker(IsValid(self:GetDriver()) and self:GetDriver() or self)
+	dmg:SetDamagePosition(pos)
+	dmg:SetDamageForce(dir * RF.Get("HitForce"))
+
+	other:TakeDamageInfo(dmg)
+	self:EmitSound("npc/roller/mine/rmine_explode_shock1.wav", 75, 100)
+
+	local shock = EffectData()
+	shock:SetEntity(self)
+	shock:SetStart(self:GetPos())
+	shock:SetOrigin(other:GetPos())
+	shock:SetScale(RF.Get("ShockSize"))
+	shock:SetMagnitude(RF.Get("ShockLength"))
+	shock:SetRadius(RF.Get("ShockArcs"))
+	util.Effect("rf_shock", shock)
+
+	local spark = EffectData()
+	spark:SetOrigin(pos)
+	spark:SetNormal(dir)
+	spark:SetMagnitude(3)
+	spark:SetScale(2)
+	util.Effect("ElectricSpark", spark)
+end
+
+function ENT:PhysicsCollide(data, phys)
+	local other = data.HitEntity
+	if not self:CanHit(other) then return end
+
+	local pos = data.HitPos
+
+	timer.Simple(0, function()
+		if not IsValid(self) or not IsValid(other) then return end
+		if not self:CanHit(other) then return end
+
+		self:HitMine(other, pos)
+	end)
+end
+
+function ENT:OnTakeDamage(dmg)
+	if self:GetBuried() or self.Detonating then return end
+
+	local inflictor = dmg:GetInflictor()
+
+	if dmg:IsDamageType(DMG_BLAST) and not (IsValid(inflictor) and inflictor:GetClass() == "rf_mine") then
+		self:SetHealth(0)
+		self:BeginDetonate(dmg:GetAttacker())
+
+		return
+	end
+
+	self:SetHealth(self:Health() - dmg:GetDamage())
+
+	local phys = self:GetPhysicsObject()
+	if IsValid(phys) then phys:ApplyForceCenter(dmg:GetDamageForce()) end
+
+	if self:Health() <= 0 then
+		self:BeginDetonate(dmg:GetAttacker())
+	end
+end
+
+function ENT:BeginDetonate(attacker)
+	if self.Detonating then return end
+	self.Detonating = true
+
+	self.DashAttackUntil = nil
+	self:SetAttack(false)
+	self:SetDying(true)
+
+	if self:GetBuried() then
+		self:SetBuried(false)
+		self:SetMoveType(MOVETYPE_VPHYSICS)
+		self:SetPos(Vector(self:GetPos().x, self:GetPos().y, (self.BurrowSurface or self:GetPos().z) + self.Radius + 4))
+	end
+
+	self:SetModel(RF.SpikeModel)
+	self:RefreshRadius()
+	self:EmitSound("npc/roller/mine/rmine_blades_out1.wav", 80, 90)
+
+	local phys = self:GetPhysicsObject()
+	if IsValid(phys) then
+		phys:Wake()
+		phys:ApplyForceCenter(Vector(0, 0, RF.Get("DeathJumpForce")))
+	end
+
+	self:EmitSound("npc/roller/mine/rmine_predetonate.wav", 85, 100)
+
+	timer.Simple(RF.Get("DeathDelay"), function()
+		if IsValid(self) then self:Explode(attacker) end
+	end)
+end
+
+function ENT:Explode(attacker)
+	if self.Exploded then return end
+	self.Exploded = true
+
+	local effect = EffectData()
+	effect:SetOrigin(self:GetPos())
+	util.Effect("Explosion", effect)
+
+	self:EmitSound("npc/roller/mine/rmine_explode_shock1.wav", 90, 100)
+
+	RF.OnMineDestroyed(self, attacker)
+	self:Remove()
+end

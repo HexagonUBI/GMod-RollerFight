@@ -1,0 +1,13 @@
+{
+	"title": "RollerFight",
+	"type": "gamemode",
+	"tags": [ "fun" ],
+	"ignore":
+	[
+		".git/*",
+		".gitattributes",
+		"dev-notes/*",
+		"tools/*",
+		"README.md"
+	]
+}

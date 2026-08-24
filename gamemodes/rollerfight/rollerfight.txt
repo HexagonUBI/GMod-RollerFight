@@ -1,0 +1,20 @@
+"rollerfight"
+{
+	"base"			"base"
+	"title"			"RollerFight"
+	"maps"			"^gm_|^phys_"
+	"category"		"pvp"
+	"menusystem"	"1"
+
+	"settings"
+	{
+		1
+		{
+			"name"		"rf_respawntime"
+			"text"		"Respawn Time"
+			"help"		"Seconds before a destroyed rollermine returns"
+			"type"		"Numeric"
+			"default"	"10"
+		}
+	}
+}

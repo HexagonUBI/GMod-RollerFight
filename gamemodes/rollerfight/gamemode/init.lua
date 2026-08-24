@@ -1,0 +1,12 @@
+AddCSLuaFile("cl_init.lua")
+AddCSLuaFile("cl_view.lua")
+AddCSLuaFile("cl_hud.lua")
+AddCSLuaFile("cl_admin.lua")
+AddCSLuaFile("shared.lua")
+AddCSLuaFile("sh_config.lua")
+AddCSLuaFile("sh_teams.lua")
+AddCSLuaFile("sh_compat.lua")
+
+include("shared.lua")
+include("sv_player.lua")
+include("sv_admin.lua")
