@@ -5,8 +5,12 @@ title RollerFight Installer
 set "REPO=HexagonUBI/GMod-RollerFight"
 set "BRANCH=main"
 set "SOURCE_URL=https://github.com/%REPO%/archive/refs/heads/%BRANCH%.zip"
+set "MODULE_NAME=gmcl_drpc_win64.dll"
 set "MODULE_DIR=https://github.com/%REPO%/raw/%BRANCH%/binaries"
-set "MODULES=gmcl_drpc_win64.dll gmcl_drpc_win32.dll"
+set "UPSTREAM_REPO=shockpast/gmcl_drpc"
+set "UPSTREAM_TAG=v1.0.0"
+set "UPSTREAM_SIZE=135680"
+set "UPSTREAM_URL=https://github.com/%UPSTREAM_REPO%/releases/download/%UPSTREAM_TAG%/%MODULE_NAME%"
 
 for %%I in ("%~dp0..") do set "ROOT=%%~fI"
 
@@ -76,7 +80,10 @@ if defined FOUND (
     echo  Discord RPC module already installed:%FOUND%
 ) else (
     echo.
-    call :ask "Install the Discord Rich Presence module"
+    echo  Discord presence needs a compiled module. RollerFight does not ship one.
+    echo  It will be taken from github.com/%UPSTREAM_REPO% %UPSTREAM_TAG% unless your
+    echo  own repo publishes one. This is optional.
+    call :ask "Download and install it"
     if not errorlevel 1 call :domodule
 )
 
@@ -219,26 +226,68 @@ exit /b 0
 :domodule
 set "WORK=!TEMP!\rollerfight_install"
 if not exist "!WORK!" mkdir "!WORK!" >nul 2>&1
-
+set "DLL=!WORK!\%MODULE_NAME%"
 set "GOTMODULE="
-for %%M in (%MODULES%) do (
-    if not defined GOTMODULE (
-        echo  Trying %MODULE_DIR%/%%M
-        curl.exe -fL --retry 1 -s -o "!WORK!\%%M" "%MODULE_DIR%/%%M"
-        if not errorlevel 1 (
-            call :showhash "!WORK!\%%M"
-            copy /y "!WORK!\%%M" "!BINDIR!\%%M" >nul
-            echo  Installed %%M into lua\bin
-            set "GOTMODULE=1"
-            set "RPCSTATUS=installed (%%M)"
-        )
+set "ORIGIN="
+
+echo  Checking your repo: %MODULE_DIR%/%MODULE_NAME%
+curl.exe -fL --retry 1 -s -o "!DLL!" "%MODULE_DIR%/%MODULE_NAME%"
+if not errorlevel 1 (
+    set "ORIGIN=your own repo"
+    set "GOTMODULE=1"
+)
+
+if not defined GOTMODULE (
+    echo  Not published there, using %UPSTREAM_REPO% %UPSTREAM_TAG%
+    curl.exe -fL --retry 2 --progress-bar -o "!DLL!" "%UPSTREAM_URL%"
+    if not errorlevel 1 (
+        set "ORIGIN=%UPSTREAM_REPO% %UPSTREAM_TAG%"
+        set "GOTMODULE=1"
     )
 )
 
 if not defined GOTMODULE (
-    echo  Nothing published in the repo's binaries folder yet.
-    echo  This one is optional, everything else works without it.
-    set "RPCSTATUS=not available yet, optional"
+    echo  Download failed. Skipping, presence is optional.
+    set "RPCSTATUS=download failed, optional"
+    rmdir /s /q "!WORK!" >nul 2>&1
+    exit /b 0
+)
+
+for %%A in ("!DLL!") do set "DLLSIZE=%%~zA"
+echo  Size  : !DLLSIZE! bytes
+call :showhash "!DLL!"
+
+if "!ORIGIN!"=="%UPSTREAM_REPO% %UPSTREAM_TAG%" (
+    if not "!DLLSIZE!"=="%UPSTREAM_SIZE%" (
+        echo.
+        echo  REFUSED: expected %UPSTREAM_SIZE% bytes from that pinned release.
+        echo  The upstream file changed, not installing it.
+        set "RPCSTATUS=refused, upstream file changed"
+        rmdir /s /q "!WORK!" >nul 2>&1
+        exit /b 0
+    )
+)
+
+if exist "!ROOT!\binaries\%MODULE_NAME%.sha256" (
+    set /p PINNED=<"!ROOT!\binaries\%MODULE_NAME%.sha256"
+    if /i not "!PINNED!"=="!LASTHASH!" (
+        echo.
+        echo  REFUSED: sha256 does not match your pinned binaries\%MODULE_NAME%.sha256
+        set "RPCSTATUS=refused, sha256 mismatch"
+        rmdir /s /q "!WORK!" >nul 2>&1
+        exit /b 0
+    )
+    echo  Matches your pinned sha256.
+)
+
+copy /y "!DLL!" "!BINDIR!\%MODULE_NAME%" >nul
+echo  Installed %MODULE_NAME% from !ORIGIN!
+set "RPCSTATUS=installed from !ORIGIN!"
+
+if not exist "!GMODDIR!\bin\win64\" (
+    echo.
+    echo  NOTE: this module is 64 bit only. Switch GarrysMod to the
+    echo  x86-64 branch in Steam under Properties, Betas.
 )
 
 rmdir /s /q "!WORK!" >nul 2>&1
@@ -249,7 +298,10 @@ exit /b 0
 set "FOUND="
 for %%N in (drpc discordrpc gdiscord) do (
     for %%P in (win64 win32 linux64 linux osx64 osx) do (
-        if exist "!BINDIR!\gmcl_%%N_%%P.dll" set "FOUND=!FOUND! gmcl_%%N_%%P.dll"
+        if exist "!BINDIR!\gmcl_%%N_%%P.dll" (
+            set "FOUND=!FOUND! gmcl_%%N_%%P.dll"
+            set "RPCSTATUS=already installed (gmcl_%%N_%%P.dll)"
+        )
     )
 )
 exit /b 0
@@ -260,6 +312,7 @@ for /f "skip=1 tokens=*" %%H in ('certutil -hashfile "%~1" SHA256 2^>nul') do (
     if not defined HASHLINE set "HASHLINE=%%H"
 )
 if defined HASHLINE echo  SHA256: !HASHLINE!
+set "LASTHASH=!HASHLINE!"
 set "HASHLINE="
 exit /b 0
 
