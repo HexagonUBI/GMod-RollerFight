@@ -109,15 +109,12 @@ function RF.SetSpectate(ply, state)
 		RF.RemoveMine(ply)
 		ply:SetNWBool("rf_ready", false)
 		ply:SetNWBool("rf_training", false)
-		ply:SetMoveType(MOVETYPE_NOCLIP)
-		ply:SetViewOffset(Vector(0, 0, 64))
-		ply:SetCurrentViewOffset(Vector(0, 0, 64))
+		ply:Spectate(OBS_MODE_ROAMING)
+		ply:SpectateEntity(NULL)
 
 		return
 	end
 
-	ply:SetViewOffset(vector_origin)
-	ply:SetCurrentViewOffset(vector_origin)
 	RF.DetachPlayer(ply)
 
 	if RF.InRound() and RF.GetGameType().lives <= 0 then
@@ -130,11 +127,17 @@ function RF.CleanUpMap()
 		ent:Remove()
 	end
 
-	game.CleanUpMap(false, {
+	if RF.Get("CleanupMap") < 1 then return end
+
+	local ok, err = pcall(game.CleanUpMap, false, {
 		"rf_mine",
 		"predicted_viewmodel",
 		"player_manager"
 	})
+
+	if not ok then
+		MsgN("[RollerFight] map cleanup failed: " .. tostring(err))
+	end
 end
 
 function RF.ClearReady()
@@ -163,7 +166,6 @@ function RF.EnterWaiting()
 	RF.SetPaused(false)
 	RF.SetState(RF.STATE_WAITING)
 	RF.ClearReady()
-	RF.CleanUpMap()
 
 	for _, ply in ipairs(player.GetAll()) do
 		ply:SetNWBool("rf_training", false)
@@ -229,6 +231,8 @@ function RF.EnterPost(reason)
 			mine:ShowSelfDestruct()
 		end
 	end
+
+	RF.BroadcastCue("roundover")
 
 	net.Start("rf_roundend")
 	net.WriteString(reason or "")
@@ -317,22 +321,16 @@ local function Tick()
 		local ready, total = RF.ReadyCount()
 		local autoAt = GetGlobalFloat("rf_autostart", 0)
 
-		if ok and ready >= total then
-			RF.EnterIntermission()
+		if not ok then
 			SetGlobalFloat("rf_autostart", 0)
-
 			return
 		end
 
-		if ok then
-			if autoAt <= 0 then
-				SetGlobalFloat("rf_autostart", CurTime() + RF.Get("AutoStartTime"))
-			elseif CurTime() >= autoAt then
-				RF.EnterIntermission()
-				SetGlobalFloat("rf_autostart", 0)
-			end
-		else
+		if autoAt <= 0 then
+			SetGlobalFloat("rf_autostart", CurTime() + RF.Get("AutoStartTime"))
+		elseif CurTime() >= autoAt then
 			SetGlobalFloat("rf_autostart", 0)
+			RF.EnterIntermission()
 		end
 
 		return
@@ -350,7 +348,13 @@ local function Tick()
 	if state == RF.STATE_POST then RF.EnterWaiting() return end
 end
 
-timer.Create("RF.RoundTick", 0.25, 0, Tick)
+timer.Create("RF.RoundTick", 0.25, 0, function()
+	local ok, err = pcall(Tick)
+
+	if not ok then
+		MsgN("[RollerFight] round tick error: " .. tostring(err))
+	end
+end)
 
 net.Receive("rf_ready", function(len, ply)
 	if RF.GetState() ~= RF.STATE_WAITING then return end

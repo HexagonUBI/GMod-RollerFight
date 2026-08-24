@@ -85,6 +85,8 @@ net.Receive("rf_roundend", function()
 end)
 
 function GM:HUDPaint()
+	if RF.Score and RF.Score.IsOpen and RF.Score.IsOpen() then return end
+
 	RoundBanner()
 
 	local ply = LocalPlayer()
@@ -131,10 +133,16 @@ function GM:HUDPaint()
 	local gap = mine:GetNWFloat("rf_gap", -1)
 	local grounded = mine:GetNWBool("rf_grounded", false)
 
+	local contact = mine:GetNWFloat("rf_contact", 999)
+	local byContact = mine:GetNWBool("rf_bycontact", false)
+
 	local lines = {
-		"grounded  " .. tostring(grounded),
+		"grounded  " .. tostring(grounded) .. (byContact and "  (contact)" or "  (ray)"),
+		"contact   " .. (contact >= 900 and "never" or string.format("%.2fs ago", contact)),
 		"gap       " .. (gap >= 9000 and "none" or string.format("%.2f", gap)),
 		"speed     " .. string.format("%.0f", speed),
+		"attack    " .. tostring(mine:GetAttackMode()),
+		"model     " .. string.GetFileFromFilename(mine:GetModel() or "?"),
 		"mode      " .. (RF.Get("MoveMode") >= 1 and "arcade" or "physics")
 	}
 

@@ -45,18 +45,39 @@ function Music.StopAll()
 	Music.Sting = nil
 end
 
-function Music.Pick(mood)
-	local list = RF.MusicBeds[mood]
-	if not list or #list == 0 then return end
-	if #list == 1 then return list[1] end
+local Available = {}
 
-	local choice = Music.Track
+function Music.Has(track)
+	if Available[track] == nil then
+		Available[track] = file.Exists("sound/" .. track, "GAME")
 
-	while choice == Music.Track do
-		choice = list[math.random(#list)]
+		if not Available[track] then
+			MsgN("[RollerFight] music not mounted, skipping " .. track)
+		end
 	end
 
-	return choice
+	return Available[track]
+end
+
+function Music.Pick(mood)
+	local list = RF.MusicBeds[mood]
+	if not list then return end
+
+	local usable = {}
+
+	for _, track in ipairs(list) do
+		if Music.Has(track) and track ~= Music.Track then table.insert(usable, track) end
+	end
+
+	if #usable == 0 then
+		for _, track in ipairs(list) do
+			if Music.Has(track) then table.insert(usable, track) end
+		end
+	end
+
+	if #usable == 0 then return end
+
+	return usable[math.random(#usable)]
 end
 
 function Music.PlayBed(mood, force)
@@ -94,7 +115,7 @@ end
 
 function Music.PlaySting(cue)
 	local track = RF.MusicStings[cue]
-	if not track then return end
+	if not track or not Music.Has(track) then return end
 	if not Music.Enabled() then return end
 	if CurTime() < Music.NextSting then return end
 

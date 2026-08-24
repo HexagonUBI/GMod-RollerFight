@@ -6,26 +6,43 @@ function RF.MusicCue(ply, cue)
 	net.Send(ply)
 end
 
+function RF.RideMine(ply, mine)
+	ply:StripWeapons()
+	ply:AllowFlashlight(true)
+	ply:Spectate(OBS_MODE_CHASE)
+	ply:SpectateEntity(mine)
+end
+
+function RF.FreeRoam(ply)
+	ply:StripWeapons()
+	ply:Spectate(OBS_MODE_ROAMING)
+	ply:SpectateEntity(NULL)
+end
+
 function RF.DetachPlayer(ply)
 	ply:DrawShadow(false)
-	ply:SetSolid(SOLID_BBOX)
-	ply:SetCollisionBounds(Vector(-8, -8, -8), Vector(8, 8, 8))
-	ply:SetViewOffset(vector_origin)
-	ply:SetViewOffsetDucked(vector_origin)
-	ply:SetCurrentViewOffset(vector_origin)
-	ply:AllowFlashlight(true)
 
-	RF.EnforceDetached(ply)
+	local mine = ply.RFMine
+
+	if IsValid(mine) then
+		RF.RideMine(ply, mine)
+	else
+		RF.FreeRoam(ply)
+	end
 end
 
 function RF.EnforceDetached(ply)
 	if ply:GetNWBool("rf_spectating", false) then return end
 
-	if not ply:GetNoDraw() then ply:SetNoDraw(true) end
-	if ply:GetMoveType() ~= MOVETYPE_NONE then ply:SetMoveType(MOVETYPE_NONE) end
-	if ply:GetCollisionGroup() ~= COLLISION_GROUP_IN_VEHICLE then ply:SetCollisionGroup(COLLISION_GROUP_IN_VEHICLE) end
+	local mine = ply.RFMine
 
-	ply:SetNotSolid(true)
+	if IsValid(mine) then
+		if ply:GetObserverMode() ~= OBS_MODE_CHASE or ply:GetObserverTarget() ~= mine then
+			RF.RideMine(ply, mine)
+		end
+	elseif ply:GetObserverMode() == OBS_MODE_NONE then
+		RF.FreeRoam(ply)
+	end
 
 	if ply:FlashlightIsOn() then ply:Flashlight(false) end
 	if IsValid(ply:GetVehicle()) then ply:ExitVehicle() end
@@ -70,6 +87,10 @@ function RF.RemoveMine(ply)
 		mine:SetDriver(NULL)
 		mine:Remove()
 	end
+
+	if IsValid(ply) and not ply:GetNWBool("rf_spectating", false) then
+		RF.FreeRoam(ply)
+	end
 end
 
 function RF.GiveMine(ply, pos)
@@ -87,7 +108,7 @@ function RF.GiveMine(ply, pos)
 
 	ply.RFMine = mine
 	ply:SetNWEntity("rf_mine", mine)
-	RF.DetachPlayer(ply)
+	RF.RideMine(ply, mine)
 	RF.MusicCue(ply, "spawn")
 
 	return mine

@@ -114,7 +114,7 @@ function ENT:SurfaceTrace()
 	})
 end
 
-function ENT:UpdateGround()
+function ENT:RayGap()
 	local pos = self:GetPos()
 	local filter = { self, self:GetDriver() }
 	local best = 9999
@@ -124,7 +124,7 @@ function ENT:UpdateGround()
 
 		local tr = util.TraceLine({
 			start = start,
-			endpos = start - Vector(0, 0, sample.depth + 72),
+			endpos = start - Vector(0, 0, sample.depth + 96),
 			filter = filter,
 			mask = MASK_SOLID
 		})
@@ -136,11 +136,25 @@ function ENT:UpdateGround()
 		end
 	end
 
-	self.GroundGap = best
-	self.Grounded = best <= RF.Get("GroundSlack")
+	return best
+end
+
+function ENT:UpdateGround()
+	local now = CurTime()
+	local contactAge = now - (self.LastFloorHit or -999)
+	local byContact = contactAge <= RF.Get("ContactMemory")
+
+	self.GroundGap = self:RayGap()
+
+	local byRay = self.GroundGap <= RF.Get("GroundSlack")
+
+	self.Grounded = byContact or byRay
+	self.ContactAge = contactAge
 
 	self:SetNWBool("rf_grounded", self.Grounded)
-	self:SetNWFloat("rf_gap", best)
+	self:SetNWFloat("rf_gap", self.GroundGap)
+	self:SetNWFloat("rf_contact", contactAge)
+	self:SetNWBool("rf_bycontact", byContact)
 end
 
 function ENT:SetAttack(on)
@@ -318,8 +332,10 @@ function ENT:Think()
 	local driver = self:GetDriver()
 	if not IsValid(driver) then return true end
 
-	driver:SetPos(self:GetPos())
 	if RF.EnforceDetached then RF.EnforceDetached(driver) end
+
+	local phys = self:GetPhysicsObject()
+	if IsValid(phys) and phys:IsAsleep() then phys:Wake() end
 
 	if not self:GetBuried() and not self.Detonating and not self:GetLocked() then
 		self:UpdateGround()
@@ -409,6 +425,18 @@ function ENT:HitMine(other, pos)
 end
 
 function ENT:PhysicsCollide(data, phys)
+	local down = data.HitPos - self:GetPos()
+
+	if down:Length() > 1 then
+		down:Normalize()
+
+		if -down.z >= RF.Get("ContactDot") then
+			self.LastFloorHit = CurTime()
+		end
+	end
+
+	self.LastImpact = CurTime()
+
 	local other = data.HitEntity
 	if not self:CanHit(other) then return end
 

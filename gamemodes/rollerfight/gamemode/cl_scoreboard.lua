@@ -72,17 +72,24 @@ local function BuildScores(parent)
 	local list = page:Add("DScrollPanel")
 	list:Dock(FILL)
 
+	local ROW, GAP = 46, 3
+
 	list.Rebuild = function()
 		list:Clear()
 
-		for index, ply in ipairs(Sorted()) do
-			local row = list:Add("DPanel")
-			row:Dock(TOP)
-			row:SetTall(46)
-			row:DockMargin(0, 0, 0, 3)
+		local canvas = list:GetCanvas()
+		local width = math.max(200, list:GetWide() - 18)
+		local players = Sorted()
+
+		canvas:SetTall(#players * (ROW + GAP))
+
+		for index, ply in ipairs(players) do
+			local row = vgui.Create("DPanel", canvas)
+			row:SetSize(width, ROW)
+			row:SetPos(0, (index - 1) * (ROW + GAP))
 			row:SetMouseInputEnabled(true)
 
-			local avatar = row:Add("AvatarImage")
+			local avatar = vgui.Create("AvatarImage", row)
 			avatar:SetSize(32, 32)
 			avatar:SetPos(38, 7)
 			avatar:SetPlayer(ply, 64)
@@ -123,10 +130,12 @@ local function BuildScores(parent)
 		end
 	end
 
-	list.Rebuild()
 	list.Think = function(self)
-		if (self.Next or 0) > CurTime() then return end
+		local stamp = #player.GetAll() .. "x" .. self:GetWide()
 
+		if self.Stamp == stamp and (self.Next or 0) > CurTime() then return end
+
+		self.Stamp = stamp
 		self.Next = CurTime() + 1
 		self.Rebuild()
 	end
@@ -304,6 +313,10 @@ local function BuildAdmin(parent)
 	return page
 end
 
+function Score.IsOpen()
+	return IsValid(Board)
+end
+
 function Score.Open()
 	if IsValid(Board) then return end
 
@@ -323,42 +336,37 @@ function Score.Open()
 		Box(0, 0, pw, ph, COL_BG)
 		Outline(0, 0, pw, ph, COL_LINE)
 
-		Box(0, 0, pw, 86, Color(10, 10, 10, 255))
-
-		surface.SetDrawColor(255, 255, 255, 46)
-		surface.SetMaterial(RF.Mat("rollerfight/sb_header.png"))
-		surface.DrawTexturedRect(0, 0, pw, 86)
-
-		Box(0, 84, pw, 2, COL_ACCENT)
+		Box(0, 0, pw, 96, Color(10, 10, 10, 255))
+		Box(0, 94, pw, 2, COL_ACCENT)
 
 		surface.SetDrawColor(255, 255, 255, 255)
 		surface.SetMaterial(RF.Mat("rollerfight/logo_wide.png"))
-		surface.DrawTexturedRect(18, 14, 246, 59)
+		surface.DrawTexturedRect(20, 16, 250, 60)
 
-		draw.SimpleText(RF.GetGameType().name .. "  |  " .. game.GetMap(), "RFSmall", 22, 76, COL_ACCENT, 0, 0)
+		draw.SimpleText(RF.GetGameType().name .. "   " .. game.GetMap(), "RFSmall", 22, 80, COL_ACCENT, 0, 0)
 
 		local state = RF.StateNames[RF.GetState()] or ""
 		local left = RF.StateTimeLeft()
 
 		if GetGlobalBool("rf_paused", false) then state = "Paused" end
 
-		draw.SimpleText(string.upper(state), "RFHead", pw - 16, 26, COL_TEXT, TEXT_ALIGN_RIGHT, 0)
+		draw.SimpleText(string.upper(state), "RFHead", pw - 20, 22, COL_TEXT, TEXT_ALIGN_RIGHT, 0)
 
 		if left > 0 then
 			draw.SimpleText(string.format("%d:%02d", math.floor(left / 60), math.floor(left % 60)),
-				"RFHudTimer", pw - 16, 46, COL_ACCENT, TEXT_ALIGN_RIGHT, 0)
+				"RFHudTimer", pw - 20, 44, COL_ACCENT, TEXT_ALIGN_RIGHT, 0)
 		end
 	end
 
 	local tabs = Board:Add("DPanel")
 	tabs:Dock(TOP)
-	tabs:DockMargin(10, 94, 10, 6)
+	tabs:DockMargin(12, 104, 12, 6)
 	tabs:SetTall(28)
 	tabs.Paint = function() end
 
 	local body = Board:Add("DPanel")
 	body:Dock(FILL)
-	body:DockMargin(10, 0, 10, 10)
+	body:DockMargin(12, 0, 12, 12)
 	body.Paint = function() end
 
 	local pages = {

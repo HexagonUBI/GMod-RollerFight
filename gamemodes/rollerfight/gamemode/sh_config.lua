@@ -47,26 +47,37 @@ RF.MusicBeds = {
 	lobby = {
 		"music/hl2_song2.mp3",
 		"music/hl2_song3.mp3",
-		"music/hl2_song26_trainstation1.mp3"
+		"music/hl2_song26_trainstation1.mp3",
+		"music/vlvx_song1.mp3",
+		"music/vlvx_song15.mp3",
+		"music/vlvx_song23ambient.mp3"
 	},
 	waiting = {
 		"music/hl2_song2.mp3",
-		"music/hl2_song3.mp3",
 		"music/hl2_song4.mp3",
-		"music/hl2_song26_trainstation1.mp3"
+		"music/vlvx_song15.mp3",
+		"music/vlvx_song19a.mp3",
+		"music/vlvx_song9.mp3"
 	},
 	combat = {
 		"music/hl2_song15.mp3",
 		"music/hl2_song14.mp3",
-		"music/hl2_song12_long.mp3",
 		"music/hl2_song17.mp3",
-		"music/hl2_song31.mp3"
+		"music/hl2_song31.mp3",
+		"music/vlvx_song22.mp3",
+		"music/vlvx_song23.mp3",
+		"music/vlvx_song27.mp3",
+		"music/vlvx_song28.mp3",
+		"music/vlvx_song0.mp3",
+		"music/vlvx_song12.mp3"
 	},
 	danger = {
 		"music/hl2_song20_submix0.mp3",
-		"music/hl2_song20_submix4.mp3",
 		"music/hl2_song29.mp3",
-		"music/ravenholm_1.mp3"
+		"music/vlvx_song25.mp3",
+		"music/vlvx_song24.mp3",
+		"music/vlvx_song21.mp3",
+		"music/vlvx_song19b.mp3"
 	}
 }
 
@@ -74,18 +85,9 @@ RF.MusicStings = {
 	spawn = "music/stingers/hl1_stinger_song7.mp3",
 	kill = "music/stingers/hl1_stinger_song8.mp3",
 	death = "music/stingers/hl1_stinger_song16.mp3",
-	intermission = "music/stingers/hl1_stinger_song27.mp3",
-	roundstart = "music/stingers/hl1_stinger_song28.mp3"
-}
-
-RF.BodyBias = Vector(0.49, 0.93, 1.00)
-RF.GlowBias = Vector(0.45, 0.95, 1.00)
-
-RF.Diggable = {
-	[MAT_DIRT] = true,
-	[MAT_SAND] = true,
-	[MAT_GRASS] = true,
-	[MAT_SNOW] = true
+	intermission = "music/vlvx_song20.mp3",
+	roundstart = "music/vlvx_song4.mp3",
+	roundover = "music/vlvx_song3.mp3"
 }
 
 RF.VarList = {
@@ -100,7 +102,9 @@ RF.VarList = {
 	{ key = "DashCooldown", group = "Physics", label = "Dash Cooldown", default = 1.4, min = 0, max = 10 },
 	{ key = "Traction", group = "Physics", label = "Traction On Slippery Ground", default = 3, min = 0, max = 30 },
 	{ key = "TractionSlip", group = "Physics", label = "Slip Before Traction Helps", default = 25, min = 1, max = 400 },
-	{ key = "GroundSlack", group = "Physics", label = "Ground Contact Slack", default = 2, min = 0.5, max = 16 },
+	{ key = "GroundSlack", group = "Physics", label = "Ground Contact Slack", default = 4, min = 0.5, max = 24 },
+	{ key = "ContactMemory", group = "Physics", label = "Contact Memory Seconds", default = 0.35, min = 0.05, max = 2 },
+	{ key = "ContactDot", group = "Physics", label = "Contact Must Point Down", default = 0.45, min = 0, max = 1 },
 	{ key = "Debug", group = "Physics", label = "Show Debug Readout", default = 0, min = 0, max = 1, realm = "client" },
 	{ key = "GroundBrake", group = "Physics", label = "Ground Brake When Idle", default = 0, min = 0, max = 8 },
 
@@ -148,6 +152,7 @@ RF.VarList = {
 	{ key = "ScoreLimit", group = "Round", label = "Score Limit (0 off)", default = 15, min = 0, max = 200 },
 	{ key = "AutoStartTime", group = "Round", label = "Auto Start Countdown", default = 30, min = 5, max = 300 },
 	{ key = "MinPlayers", group = "Round", label = "Players Needed To Start", default = 1, min = 1, max = 32 },
+	{ key = "CleanupMap", group = "Round", label = "Clean Map Each Round", default = 1, min = 0, max = 1 },
 	{ key = "IntermissionTime", group = "Round", label = "Intermission Length", default = 8, min = 2, max = 30 },
 	{ key = "CountdownTime", group = "Round", label = "Countdown Length", default = 3, min = 1, max = 10 },
 	{ key = "PostTime", group = "Round", label = "Stats Screen Length", default = 12, min = 3, max = 60 },
