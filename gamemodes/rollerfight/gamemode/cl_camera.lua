@@ -123,6 +123,15 @@ function Cam.Reset()
 	Cam.Anchors = {}
 end
 
-hook.Add("InitPostEntity", "RF.CamBuild", function()
-	timer.Simple(2, Cam.BuildAnchors)
+net.Receive("rf_anchors", function()
+	local count = net.ReadUInt(8)
+
+	Cam.Anchors = {}
+
+	for _ = 1, count do
+		table.insert(Cam.Anchors, net.ReadVector())
+	end
+
+	Cam.From = nil
+	Cam.To = nil
 end)

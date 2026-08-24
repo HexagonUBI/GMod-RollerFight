@@ -5,6 +5,76 @@ util.AddNetworkString("rf_forcestart")
 util.AddNetworkString("rf_roundend")
 util.AddNetworkString("rf_pause")
 util.AddNetworkString("rf_spectate")
+util.AddNetworkString("rf_anchors")
+
+RF.Anchors = {}
+
+local function AnchorAt(sample)
+	if util.PointContents(sample) ~= CONTENTS_EMPTY then return end
+
+	local tr = util.TraceLine({
+		start = sample,
+		endpos = sample - Vector(0, 0, 4096),
+		mask = MASK_SOLID_BRUSHONLY
+	})
+
+	if not tr.Hit or tr.HitSky or tr.HitNormal.z < 0.7 then return end
+
+	local eye = tr.HitPos + Vector(0, 0, RF.Get("LobbyCamHeight"))
+
+	if not util.IsInWorld(eye) then return end
+	if util.PointContents(eye) ~= CONTENTS_EMPTY then return end
+
+	local head = util.TraceLine({
+		start = tr.HitPos + Vector(0, 0, 16),
+		endpos = eye + Vector(0, 0, 24),
+		mask = MASK_SOLID_BRUSHONLY
+	})
+
+	if head.Fraction < 0.9 then return end
+
+	return eye
+end
+
+function RF.BuildAnchors()
+	RF.Anchors = {}
+
+	for _, class in ipairs(RF.SpawnClasses) do
+		for _, ent in ipairs(ents.FindByClass(class)) do
+			local point = AnchorAt(ent:GetPos() + Vector(0, 0, 48))
+			if point then table.insert(RF.Anchors, point) end
+		end
+	end
+
+	local mins, maxs = game.GetWorld():GetModelBounds()
+
+	for _ = 1, 6000 do
+		if #RF.Anchors >= 48 then break end
+
+		local point = AnchorAt(Vector(
+			math.Rand(mins.x, maxs.x),
+			math.Rand(mins.y, maxs.y),
+			math.Rand(mins.z, maxs.z)
+		))
+
+		if point then table.insert(RF.Anchors, point) end
+	end
+
+	MsgN("[RollerFight] built " .. #RF.Anchors .. " camera anchors")
+end
+
+function RF.SendAnchors(ply)
+	if #RF.Anchors == 0 then return end
+
+	net.Start("rf_anchors")
+	net.WriteUInt(#RF.Anchors, 8)
+
+	for _, point in ipairs(RF.Anchors) do
+		net.WriteVector(point)
+	end
+
+	if IsValid(ply) then net.Send(ply) else net.Broadcast() end
+end
 
 function RF.SetState(state, duration)
 	SetGlobalInt("rf_state", state)
@@ -185,11 +255,11 @@ function RF.BroadcastCue(cue)
 end
 
 function RF.CanStart()
-	local gt = RF.GetGameType()
+	local need = math.max(1, math.floor(RF.Get("MinPlayers")))
 	local ready, total = RF.ReadyCount()
 
-	if total < gt.minPlayers then return false, "need " .. gt.minPlayers .. " players" end
-	if ready < gt.minPlayers then return false, "need " .. gt.minPlayers .. " ready" end
+	if total < need then return false, "need " .. need .. " players" end
+	if ready < need then return false, "need " .. need .. " ready" end
 
 	return true
 end
@@ -334,4 +404,17 @@ end)
 
 hook.Add("InitPostEntity", "RF.RoundBoot", function()
 	timer.Simple(1, RF.EnterWaiting)
+	timer.Simple(2, function()
+		RF.BuildAnchors()
+		RF.SendAnchors()
+	end)
+end)
+
+hook.Add("PlayerInitialSpawn", "RF.RoundAnchors", function(ply)
+	timer.Simple(4, function()
+		if not IsValid(ply) then return end
+		if #RF.Anchors == 0 then RF.BuildAnchors() end
+
+		RF.SendAnchors(ply)
+	end)
 end)

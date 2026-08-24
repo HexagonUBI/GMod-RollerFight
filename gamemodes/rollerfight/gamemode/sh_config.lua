@@ -147,6 +147,7 @@ RF.VarList = {
 	{ key = "RoundTime", group = "Round", label = "Round Length", default = 300, min = 30, max = 3600 },
 	{ key = "ScoreLimit", group = "Round", label = "Score Limit (0 off)", default = 15, min = 0, max = 200 },
 	{ key = "AutoStartTime", group = "Round", label = "Auto Start Countdown", default = 30, min = 5, max = 300 },
+	{ key = "MinPlayers", group = "Round", label = "Players Needed To Start", default = 1, min = 1, max = 32 },
 	{ key = "IntermissionTime", group = "Round", label = "Intermission Length", default = 8, min = 2, max = 30 },
 	{ key = "CountdownTime", group = "Round", label = "Countdown Length", default = 3, min = 1, max = 10 },
 	{ key = "PostTime", group = "Round", label = "Stats Screen Length", default = 12, min = 3, max = 60 },

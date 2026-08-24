@@ -62,7 +62,7 @@ local function BuildScores(parent)
 	head.Paint = function(self, w, h)
 		Box(0, 0, w, h, Color(24, 24, 24))
 
-		draw.SimpleText("PLAYER", "RFSmall", 40, h * 0.5, COL_DIM, 0, TEXT_ALIGN_CENTER)
+		draw.SimpleText("PLAYER", "RFSmall", 80, h * 0.5, COL_DIM, 0, TEXT_ALIGN_CENTER)
 		draw.SimpleText("KILLS", "RFSmall", w - 250, h * 0.5, COL_DIM, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 		draw.SimpleText("DEATHS", "RFSmall", w - 170, h * 0.5, COL_DIM, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 		draw.SimpleText("RATIO", "RFSmall", w - 95, h * 0.5, COL_DIM, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
@@ -78,38 +78,47 @@ local function BuildScores(parent)
 		for index, ply in ipairs(Sorted()) do
 			local row = list:Add("DPanel")
 			row:Dock(TOP)
-			row:SetTall(30)
-			row:DockMargin(0, 0, 0, 2)
+			row:SetTall(46)
+			row:DockMargin(0, 0, 0, 3)
+			row:SetMouseInputEnabled(true)
+
+			local avatar = row:Add("AvatarImage")
+			avatar:SetSize(32, 32)
+			avatar:SetPos(38, 7)
+			avatar:SetPlayer(ply, 64)
+			avatar:SetMouseInputEnabled(false)
 
 			row.Paint = function(self, w, h)
-				Box(0, 0, w, h, index % 2 == 0 and COL_ROWALT or COL_ROW)
+				Box(0, 0, w, h, self:IsHovered() and Color(54, 54, 54) or (index % 2 == 0 and COL_ROWALT or COL_ROW))
+				Box(0, 0, 4, h, RF.TeamColors[ply:Team()] or COL_DIM)
+				Outline(36, 5, 36, 36, Color(90, 90, 90))
 
-				local col = RF.TeamColors[ply:Team()] or COL_DIM
-				Box(0, 0, 4, h, col)
+				if ply == LocalPlayer() then Outline(0, 0, w, h, COL_ACCENT) end
 
-				if ply == LocalPlayer() then
-					Outline(0, 0, w, h, COL_ACCENT)
+				draw.SimpleText(index, "RFHead", 20, h * 0.5, COL_DIM, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+				draw.SimpleText(ply:Nick(), "RFBody", 80, h * 0.5 - 8, COL_TEXT, 0, TEXT_ALIGN_CENTER)
+
+				local gt = RF.GetGameType()
+				local note = team.GetName(ply:Team()) or ""
+
+				if RF.GetState() == RF.STATE_WAITING then
+					note = RF.IsReady(ply) and "ready" or (RF.IsTraining(ply) and "training" or "not ready")
+				elseif gt.lives > 0 and RF.InRound() then
+					note = IsValid(ply:GetNWEntity("rf_mine")) and "alive" or "eliminated"
 				end
 
-				draw.SimpleText(index, "RFSmall", 20, h * 0.5, COL_DIM, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-				draw.SimpleText(ply:Nick(), "RFBody", 40, h * 0.5, COL_TEXT, 0, TEXT_ALIGN_CENTER)
+				draw.SimpleText(note, "RFSmall", 80, h * 0.5 + 10, COL_DIM, 0, TEXT_ALIGN_CENTER)
 
 				local kills, deaths = ply:Frags(), ply:Deaths()
 				local ratio = deaths > 0 and string.format("%.2f", kills / deaths) or tostring(kills)
+				local ping = ply:Ping()
 
-				draw.SimpleText(kills, "RFBody", w - 250, h * 0.5, COL_TEXT, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+				draw.SimpleText(kills, "RFHead", w - 250, h * 0.5, COL_TEXT, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 				draw.SimpleText(deaths, "RFBody", w - 170, h * 0.5, COL_DIM, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 				draw.SimpleText(ratio, "RFBody", w - 95, h * 0.5, COL_TEXT, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-				draw.SimpleText(ply:Ping(), "RFSmall", w - 25, h * 0.5, COL_DIM, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-
-				local gt = RF.GetGameType()
-
-				if gt.lives > 0 and RF.InRound() then
-					local alive = IsValid(ply:GetNWEntity("rf_mine"))
-
-					draw.SimpleText(alive and "ALIVE" or "OUT", "RFSmall", w - 320, h * 0.5,
-						alive and Color(90, 190, 100) or Color(200, 80, 70), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-				end
+				draw.SimpleText(ping, "RFSmall", w - 25, h * 0.5,
+					ping < 80 and Color(90, 190, 100) or (ping < 160 and COL_ACCENT or Color(220, 90, 80)),
+					TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 			end
 		end
 	end
@@ -314,36 +323,36 @@ function Score.Open()
 		Box(0, 0, pw, ph, COL_BG)
 		Outline(0, 0, pw, ph, COL_LINE)
 
-		Box(0, 0, pw, 72, Color(10, 10, 10, 255))
+		Box(0, 0, pw, 86, Color(10, 10, 10, 255))
 
-		surface.SetDrawColor(255, 255, 255, 26)
-		surface.SetMaterial(RF.Mat("rollerfight/gt_dm.jpg"))
-		surface.DrawTexturedRect(0, 0, pw, 72)
+		surface.SetDrawColor(255, 255, 255, 46)
+		surface.SetMaterial(RF.Mat("rollerfight/sb_header.png"))
+		surface.DrawTexturedRect(0, 0, pw, 86)
 
-		Box(0, 70, pw, 2, COL_ACCENT)
+		Box(0, 84, pw, 2, COL_ACCENT)
 
 		surface.SetDrawColor(255, 255, 255, 255)
-		surface.SetMaterial(RF.Mat("rollerfight/logo.png"))
-		surface.DrawTexturedRect(14, 12, 132, 48)
+		surface.SetMaterial(RF.Mat("rollerfight/logo_wide.png"))
+		surface.DrawTexturedRect(18, 14, 246, 59)
 
-		draw.SimpleText(RF.GetGameType().name .. "  |  " .. game.GetMap(), "RFSmall", 156, 44, COL_ACCENT, 0, 0)
+		draw.SimpleText(RF.GetGameType().name .. "  |  " .. game.GetMap(), "RFSmall", 22, 76, COL_ACCENT, 0, 0)
 
 		local state = RF.StateNames[RF.GetState()] or ""
 		local left = RF.StateTimeLeft()
 
 		if GetGlobalBool("rf_paused", false) then state = "Paused" end
 
-		draw.SimpleText(string.upper(state), "RFHead", pw - 16, 22, COL_TEXT, TEXT_ALIGN_RIGHT, 0)
+		draw.SimpleText(string.upper(state), "RFHead", pw - 16, 26, COL_TEXT, TEXT_ALIGN_RIGHT, 0)
 
 		if left > 0 then
 			draw.SimpleText(string.format("%d:%02d", math.floor(left / 60), math.floor(left % 60)),
-				"RFSmall", pw - 16, 44, COL_ACCENT, TEXT_ALIGN_RIGHT, 0)
+				"RFHudTimer", pw - 16, 46, COL_ACCENT, TEXT_ALIGN_RIGHT, 0)
 		end
 	end
 
 	local tabs = Board:Add("DPanel")
 	tabs:Dock(TOP)
-	tabs:DockMargin(10, 80, 10, 6)
+	tabs:DockMargin(10, 94, 10, 6)
 	tabs:SetTall(28)
 	tabs.Paint = function() end
 

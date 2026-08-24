@@ -92,23 +92,25 @@ function Discord.BuildPresence()
 
 	local gt = RF.GetGameType()
 	local round = RF.GetState()
-	local state
+	local details, state
 
 	if round == RF.STATE_WAITING then
-		local ready, total = RF.ReadyCount()
-		state = RF.IsTraining(ply) and "Training" or string.format("In lobby, %d/%d ready", ready, total)
+		details = "Waiting For Players"
+		state = RF.IsTraining(ply) and "Training" or game.GetMap()
 	elseif round == RF.STATE_POST then
-		state = "Round over"
-	elseif IsValid(ply:GetNWEntity("rf_mine")) then
+		details = "Round Over"
 		state = string.format("%d kills, %d deaths", ply:Frags(), ply:Deaths())
 	else
-		state = "Destroyed"
+		details = gt.name
+		state = IsValid(ply:GetNWEntity("rf_mine"))
+			and string.format("%d kills, %d deaths", ply:Frags(), ply:Deaths())
+			or "Destroyed"
 	end
 
 	local teamName = team.GetName(ply:Team()) or "Fighters"
 
 	return {
-		details = string.format("%s on %s", gt.name, game.GetMap()),
+		details = details,
 		state = state,
 		large_image_key = "rf_logo",
 		large_image_text = "RollerFight",
