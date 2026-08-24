@@ -114,8 +114,21 @@ function RF.GiveMine(ply, pos)
 	return mine
 end
 
-function RF.OnMineDestroyed(mine, attacker)
+function RF.KillFeed(killer, victim, cause, assist)
+	net.Start("rf_kill")
+	net.WriteString(IsValid(killer) and killer:Nick() or "")
+	net.WriteUInt(IsValid(killer) and killer:Team() or 0, 8)
+	net.WriteString(IsValid(victim) and victim:Nick() or "A rollermine")
+	net.WriteUInt(IsValid(victim) and victim:Team() or 0, 8)
+	net.WriteString(cause or "world")
+	net.WriteString(IsValid(assist) and assist:Nick() or "")
+	net.Broadcast()
+end
+
+function RF.OnMineDestroyed(mine, attacker, cause, assist)
 	local ply = mine:GetDriver()
+
+	RF.KillFeed(attacker ~= ply and attacker or nil, ply, cause, assist)
 
 	if IsValid(attacker) and attacker:IsPlayer() then
 		if attacker == ply then

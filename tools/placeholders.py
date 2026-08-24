@@ -52,13 +52,16 @@ def caption(draw, w, h, title, spec, accent):
     draw.text((w - 8 - len(spec) * 6, h - 24), spec, fill=TEXT)
 
 
-def banner(path, title, accent, painter, w=640, h=300):
+def banner(path, title, accent, painter, w=820, h=264, drawn=None):
     img = Image.new("RGBA", (w, h), DARK)
     d = ImageDraw.Draw(img)
     stripes(d, w, h, (accent[0] // 5, accent[1] // 5, accent[2] // 5, 255))
     painter(d, w, h, accent)
     dashed(d, w, h, accent)
-    caption(d, w, h, title, "%dx%d PLACEHOLDER" % (w, h), accent)
+    spec = "%dx%d" % (w, h)
+    if drawn:
+        spec = spec + "  drawn %dx%d" % drawn
+    caption(d, w, h, title, spec, accent)
     img.save(path, optimize=True)
     print("  %-26s %dx%d" % (os.path.basename(path), w, h))
 
@@ -87,8 +90,8 @@ def paint_lots(d, w, h, accent):
 
 
 def paint_header(d, w, h, accent):
-    mine(d, 44, h // 2, 20, accent)
-    d.text((78, h // 2 - 6), "SCOREBOARD HEADER", fill=TEXT)
+    for i in range(6):
+        mine(d, int(w * 0.62 + i * 62), h // 2, 16, (70, 70, 70, 255))
 
 
 def icon(path, size, label, painter, accent):
@@ -128,12 +131,13 @@ def main():
     os.makedirs(UI, exist_ok=True)
 
     print("gametype banners")
-    banner(os.path.join(MATS, "gt_dm.png"), "DEATHMATCH", (238, 130, 32, 255), paint_dm)
-    banner(os.path.join(MATS, "gt_tdm.png"), "TEAM DEATHMATCH", (80, 160, 245, 255), paint_tdm)
-    banner(os.path.join(MATS, "gt_lots.png"), "LAST ONE TO STAND", (215, 70, 60, 255), paint_lots)
+    shot = (410, 132)
+    banner(os.path.join(MATS, "gt_dm.png"), "DEATHMATCH", (238, 130, 32, 255), paint_dm, drawn=shot)
+    banner(os.path.join(MATS, "gt_tdm.png"), "TEAM DEATHMATCH", (80, 160, 245, 255), paint_tdm, drawn=shot)
+    banner(os.path.join(MATS, "gt_lots.png"), "LAST ONE TO STAND", (215, 70, 60, 255), paint_lots, drawn=shot)
 
     print("interface")
-    banner(os.path.join(MATS, "sb_header.png"), "SCOREBOARD", (238, 130, 32, 255), paint_header, 960, 86)
+    banner(os.path.join(MATS, "sb_header.png"), "SCOREBOARD", (238, 130, 32, 255), paint_header, 960, 96, (960, 96))
 
     print("icons")
     icon(os.path.join(UI, "ph_avatar.png"), 64, "avatar", ic_avatar, (150, 150, 150, 255))

@@ -31,10 +31,44 @@ function Music.StopBed()
 	Music.Generation = Music.Generation + 1
 
 	if IsValid(Music.Bed) then Music.Bed:Stop() end
+	if IsValid(Music.Fading) then Music.Fading:Stop() end
+
+	Music.Bed = nil
+	Music.Fading = nil
+	Music.Mood = nil
+	Music.Track = nil
+	Music.FadeStart = nil
+end
+
+function Music.FadeOut(seconds)
+	if not IsValid(Music.Bed) then return end
+
+	if IsValid(Music.Fading) then Music.Fading:Stop() end
+
+	Music.Generation = Music.Generation + 1
+	Music.Fading = Music.Bed
+	Music.FadeStart = CurTime()
+	Music.FadeLength = seconds or RF.MusicFadeTime
+	Music.FadeFrom = Music.Bed:GetVolume()
 
 	Music.Bed = nil
 	Music.Mood = nil
 	Music.Track = nil
+end
+
+function Music.StepFade()
+	if not IsValid(Music.Fading) then return end
+
+	local frac = (CurTime() - (Music.FadeStart or 0)) / math.max(0.1, Music.FadeLength or 1)
+
+	if frac >= 1 then
+		Music.Fading:Stop()
+		Music.Fading = nil
+
+		return
+	end
+
+	Music.Fading:SetVolume((Music.FadeFrom or 1) * (1 - frac))
 end
 
 function Music.StopAll()
@@ -89,6 +123,9 @@ function Music.PlayBed(mood, force)
 
 	Music.StopBed()
 
+	if IsValid(Music.Sting) then Music.Sting:Stop() end
+
+	Music.Sting = nil
 	Music.Mood = mood
 	Music.Track = track
 
@@ -167,9 +204,18 @@ function Music.Update()
 		Music.Bed:SetVolume(Music.BedVolume())
 	end
 
+	local state = RF.GetState()
 	local mood = Music.MoodFor()
 
-	if Music.Mood ~= mood then
+	if state == RF.STATE_POST or state == RF.STATE_INTERMISSION then
+		if IsValid(Music.Bed) then Music.FadeOut(RF.MusicFadeTime) end
+
+		return
+	end
+
+	local locked = state == RF.STATE_ACTIVE and IsValid(Music.Bed)
+
+	if Music.Mood ~= mood and not locked then
 		Music.PlayBed(mood)
 		return
 	end
@@ -182,6 +228,7 @@ function Music.Update()
 end
 
 timer.Create("RF.MusicDirector", 0.5, 0, Music.Update)
+timer.Create("RF.MusicFade", 0.05, 0, Music.StepFade)
 
 concommand.Add("rf_music_skip", function()
 	Music.PlayBed(Music.MoodFor(), true)

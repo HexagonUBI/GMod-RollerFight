@@ -52,6 +52,7 @@ RF.MusicBedVolume = 0.75
 RF.MusicDuck = 0.25
 RF.MusicDuckTime = 4
 RF.MusicStingGap = 6
+RF.MusicFadeTime = 3
 
 RF.MusicBeds = {
 	lobby = {
@@ -158,6 +159,10 @@ RF.VarList = {
 	{ key = "BurrowCooldown", group = "Digging", label = "Burrow Cooldown", default = 1, min = 0, max = 10 },
 
 	{ key = "RespawnTime", group = "Round", label = "Respawn Seconds", default = 10, min = 0, max = 120 },
+	{ key = "FeedShow", group = "Look", label = "Show Killfeed", default = 1, min = 0, max = 1, realm = "client" },
+	{ key = "FeedTime", group = "Look", label = "Killfeed Entry Seconds", default = 7, min = 2, max = 30, realm = "client" },
+	{ key = "FeedMax", group = "Look", label = "Killfeed Rows", default = 6, min = 1, max = 12, realm = "client" },
+	{ key = "AssistWindow", group = "Combat", label = "Assist Credit Window", default = 6, min = 0, max = 30 },
 	{ key = "GameType", group = "Round", label = "Gametype (1 DM, 2 TDM, 3 LOTS)", default = 1, min = 1, max = 3 },
 	{ key = "RoundTime", group = "Round", label = "Round Length", default = 300, min = 30, max = 3600 },
 	{ key = "ScoreLimit", group = "Round", label = "Score Limit (0 off)", default = 15, min = 0, max = 200 },

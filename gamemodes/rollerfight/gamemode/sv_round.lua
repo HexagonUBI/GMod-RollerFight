@@ -193,6 +193,9 @@ function RF.EnterCountdown()
 
 	RF.SetState(RF.STATE_COUNTDOWN, RF.Get("CountdownTime"))
 
+	net.Start("rf_feedclear")
+	net.Broadcast()
+
 	for _, ply in ipairs(player.GetAll()) do
 		ply:SetFrags(0)
 		ply:SetDeaths(0)
@@ -227,7 +230,7 @@ function RF.EnterPost(reason)
 		local mine = ply.RFMine
 
 		if IsValid(mine) then
-			mine:SetFrozen(true)
+			mine:LockInput(true)
 			mine:ShowSelfDestruct()
 		end
 	end

@@ -338,13 +338,21 @@ function Score.Open()
 		Outline(0, 0, pw, ph, COL_LINE)
 
 		Box(0, 0, pw, 96, Color(10, 10, 10, 255))
+
+		surface.SetDrawColor(255, 255, 255, 70)
+		surface.SetMaterial(RF.Mat("rollerfight/sb_header.png"))
+		surface.DrawTexturedRect(0, 0, pw, 96)
+
 		Box(0, 94, pw, 2, COL_ACCENT)
 
 		surface.SetDrawColor(255, 255, 255, 255)
 		surface.SetMaterial(RF.Mat("rollerfight/logo_wide.png"))
-		surface.DrawTexturedRect(20, 16, 250, 60)
+		surface.DrawTexturedRect(20, 18, 250, 60)
 
-		draw.SimpleText(RF.GetGameType().name .. "   " .. game.GetMap(), "RFSmall", 22, 80, COL_ACCENT, 0, 0)
+		Box(288, 26, 2, 44, Color(90, 90, 90))
+
+		draw.SimpleText(RF.GetGameType().name, "RFHead", 304, 34, COL_TEXT, 0, TEXT_ALIGN_CENTER)
+		draw.SimpleText(game.GetMap(), "RFSmall", 304, 60, COL_ACCENT, 0, TEXT_ALIGN_CENTER)
 
 		local state = RF.StateNames[RF.GetState()] or ""
 		local left = RF.StateTimeLeft()

@@ -16,6 +16,7 @@ function ENT:Initialize()
 	self.Sprinting = false
 	self.Grounded = false
 	self.HitTimes = {}
+	self.DamageLog = {}
 	self.LastThink = CurTime()
 
 	self:SetEnergy(RF.Get("MaxEnergy"))
@@ -55,6 +56,13 @@ function ENT:SetFrozen(state)
 		phys:EnableMotion(true)
 		phys:Wake()
 	end
+end
+
+function ENT:LockInput(state)
+	self:SetLocked(state)
+
+	local phys = self:GetPhysicsObject()
+	if IsValid(phys) and not state then phys:Wake() end
 end
 
 function ENT:ReadCommand(cmd)
@@ -355,8 +363,32 @@ function ENT:CheckWater()
 	if level <= 0 or self.Detonating then return end
 	if self:WaterLevel() < level then return end
 
+	self:LogDamage(nil, "water")
 	self:SetHealth(0)
 	self:BeginDetonate(nil)
+end
+
+function ENT:LogDamage(attacker, cause)
+	self.LastCause = cause
+
+	if IsValid(attacker) and attacker:IsPlayer() then
+		table.insert(self.DamageLog, 1, { who = attacker, cause = cause, when = CurTime() })
+
+		while #self.DamageLog > 6 do
+			table.remove(self.DamageLog)
+		end
+	end
+end
+
+function ENT:FindAssist(killer)
+	local window = RF.Get("AssistWindow")
+	if window <= 0 then return end
+
+	for _, entry in ipairs(self.DamageLog or {}) do
+		if CurTime() - entry.when > window then break end
+
+		if IsValid(entry.who) and entry.who ~= killer then return entry.who end
+	end
 end
 
 function ENT:CanHit(other)
@@ -404,6 +436,10 @@ function ENT:HitMine(other, pos)
 	dmg:SetAttacker(IsValid(self:GetDriver()) and self:GetDriver() or self)
 	dmg:SetDamagePosition(pos)
 	dmg:SetDamageForce(dir * RF.Get("HitForce"))
+
+	if other.LogDamage then
+		other:LogDamage(self:GetDriver(), dashing and "dash" or "contact")
+	end
 
 	other:TakeDamageInfo(dmg)
 	self:EmitSound("npc/roller/mine/rmine_explode_shock1.wav", 75, 100)
@@ -457,11 +493,14 @@ function ENT:OnTakeDamage(dmg)
 	local inflictor = dmg:GetInflictor()
 
 	if dmg:IsDamageType(DMG_BLAST) and not (IsValid(inflictor) and inflictor:GetClass() == "rf_mine") then
+		self:LogDamage(dmg:GetAttacker(), "blast")
 		self:SetHealth(0)
 		self:BeginDetonate(dmg:GetAttacker())
 
 		return
 	end
+
+	if not self.LastCause then self:LogDamage(dmg:GetAttacker(), "world") end
 
 	self:SetHealth(self:Health() - dmg:GetDamage())
 
@@ -524,6 +563,6 @@ function ENT:Explode(attacker)
 
 	self:EmitSound("npc/roller/mine/rmine_explode_shock1.wav", 90, 100)
 
-	RF.OnMineDestroyed(self, attacker)
+	RF.OnMineDestroyed(self, attacker, self.LastCause or "world", self:FindAssist(attacker))
 	self:Remove()
 end

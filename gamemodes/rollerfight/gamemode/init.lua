@@ -13,6 +13,7 @@ AddCSLuaFile("sh_round.lua")
 AddCSLuaFile("cl_lobby.lua")
 AddCSLuaFile("cl_scoreboard.lua")
 AddCSLuaFile("cl_camera.lua")
+AddCSLuaFile("cl_killfeed.lua")
 
 include("shared.lua")
 include("sv_player.lua")
@@ -20,3 +21,5 @@ include("sv_admin.lua")
 include("sv_round.lua")
 
 util.AddNetworkString("rf_music_cue")
+util.AddNetworkString("rf_kill")
+util.AddNetworkString("rf_feedclear")
