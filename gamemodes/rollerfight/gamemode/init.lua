@@ -19,6 +19,7 @@ include("shared.lua")
 include("sv_player.lua")
 include("sv_admin.lua")
 include("sv_round.lua")
+include("sv_bots.lua")
 
 util.AddNetworkString("rf_music_cue")
 util.AddNetworkString("rf_kill")

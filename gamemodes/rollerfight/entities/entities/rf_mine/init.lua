@@ -464,6 +464,35 @@ function ENT:HitMine(other, pos)
 	util.Effect("ElectricSpark", spark)
 end
 
+RF.DoorClasses = {
+	prop_door_rotating = "Open",
+	func_door = "Open",
+	func_door_rotating = "Open",
+	func_movelinear = "Open",
+	func_button = "Press",
+	momentary_rot_button = "Press"
+}
+
+function ENT:TouchDoor(other, speed)
+	if RF.Get("DoorPush") < 1 then return end
+	if speed < RF.Get("DoorSpeed") then return end
+	if not IsValid(other) then return end
+
+	local input = RF.DoorClasses[other:GetClass()]
+	if not input then return end
+
+	self.DoorTimes = self.DoorTimes or {}
+
+	local now = CurTime()
+	if (self.DoorTimes[other] or 0) > now then return end
+
+	self.DoorTimes[other] = now + 1.5
+
+	local driver = self:GetDriver()
+
+	other:Fire(input, "", 0, IsValid(driver) and driver or self, self)
+end
+
 function ENT:PhysicsCollide(data, phys)
 	local down = data.HitPos - self:GetPos()
 
@@ -478,6 +507,8 @@ function ENT:PhysicsCollide(data, phys)
 	self.LastImpact = CurTime()
 
 	local other = data.HitEntity
+
+	if IsValid(other) then self:TouchDoor(other, data.Speed or 0) end
 	if not self:CanHit(other) then return end
 
 	local pos = data.HitPos

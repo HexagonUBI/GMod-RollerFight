@@ -170,6 +170,15 @@ RF.VarList = {
 	{ key = "AllReadyTime", group = "Round", label = "Countdown When All Ready", default = 15, min = 3, max = 120 },
 	{ key = "MinPlayers", group = "Round", label = "Players Needed To Start", default = 1, min = 1, max = 32 },
 	{ key = "CleanupMap", group = "Round", label = "Clean Map Each Round", default = 1, min = 0, max = 1 },
+
+	{ key = "BotsEnabled", group = "Bots", label = "Bots Play", default = 1, min = 0, max = 1 },
+	{ key = "BotAttackRange", group = "Bots", label = "Bot Attack Range", default = 600, min = 100, max = 3000 },
+	{ key = "BotDashRange", group = "Bots", label = "Bot Dash Range", default = 320, min = 50, max = 2000 },
+	{ key = "BotJumpChance", group = "Bots", label = "Bot Jump Chance", default = 0.25, min = 0, max = 1 },
+	{ key = "BotSprint", group = "Bots", label = "Bots Sprint", default = 1, min = 0, max = 1 },
+
+	{ key = "DoorPush", group = "Physics", label = "Mine Opens Doors", default = 1, min = 0, max = 1 },
+	{ key = "DoorSpeed", group = "Physics", label = "Speed Needed To Open", default = 90, min = 0, max = 600 },
 	{ key = "IntermissionTime", group = "Round", label = "Intermission Length", default = 8, min = 2, max = 30 },
 	{ key = "CountdownTime", group = "Round", label = "Countdown Length", default = 3, min = 1, max = 10 },
 	{ key = "PostTime", group = "Round", label = "Stats Screen Length", default = 12, min = 3, max = 60 },

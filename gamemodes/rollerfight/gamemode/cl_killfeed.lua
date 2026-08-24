@@ -42,7 +42,7 @@ function Feed.Clear()
 end
 
 net.Receive("rf_kill", function()
-	Push({
+	local entry = {
 		Killer = net.ReadString(),
 		KillerTeam = net.ReadUInt(8),
 		KillerColor = net.ReadUInt(8),
@@ -51,7 +51,19 @@ net.Receive("rf_kill", function()
 		VictimColor = net.ReadUInt(8),
 		Cause = net.ReadString(),
 		Assist = net.ReadString()
-	})
+	}
+
+	local me = LocalPlayer()
+
+	if IsValid(me) then
+		local nick = me:Nick()
+
+		entry.Mine = entry.Killer == nick
+		entry.Died = entry.Victim == nick
+		entry.Assisted = entry.Assist == nick
+	end
+
+	Push(entry)
 end)
 
 net.Receive("rf_feedclear", Feed.Clear)
@@ -115,11 +127,30 @@ hook.Add("HUDPaint", "RF.Killfeed", function()
 
 		local rowY = y + (index - 1) * (ROW + 4)
 
-		surface.SetDrawColor(12, 12, 12, math.min(200, alpha))
+		local involved = entry.Mine or entry.Died or entry.Assisted
+		local accent = Color(238, 130, 32)
+
+		if entry.Died then
+			accent = Color(220, 70, 60)
+		elseif entry.Mine then
+			accent = Color(110, 210, 120)
+		end
+
+		if involved then
+			surface.SetDrawColor(accent.r * 0.28, accent.g * 0.28, accent.b * 0.28, math.min(235, alpha))
+		else
+			surface.SetDrawColor(12, 12, 12, math.min(200, alpha))
+		end
+
 		surface.DrawRect(x - width - 10, rowY, width + 14, ROW)
 
-		surface.SetDrawColor(238, 130, 32, math.min(220, alpha))
-		surface.DrawRect(x + 4, rowY, 2, ROW)
+		if involved then
+			surface.SetDrawColor(accent.r, accent.g, accent.b, math.min(255, alpha))
+			surface.DrawOutlinedRect(x - width - 10, rowY, width + 14, ROW)
+		end
+
+		surface.SetDrawColor(accent.r, accent.g, accent.b, math.min(230, alpha))
+		surface.DrawRect(x + 4, rowY, involved and 4 or 2, ROW)
 
 		local cursor = x - width - 2
 
