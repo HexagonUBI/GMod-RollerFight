@@ -110,10 +110,16 @@ function Discord.BuildPresence()
 	return {
 		details = string.format("%s on %s", gt.name, game.GetMap()),
 		state = state,
+		large_image_key = "rf_logo",
+		large_image_text = "RollerFight",
+		small_image_key = RF.DiscordTeamIcon[ply:Team()] or "rf_free",
+		small_image_text = teamName,
 		largeImageKey = "rf_logo",
 		largeImageText = "RollerFight",
 		smallImageKey = RF.DiscordTeamIcon[ply:Team()] or "rf_free",
 		smallImageText = teamName,
+		party_size = #player.GetAll(),
+		party_max = game.MaxPlayers(),
 		startTimestamp = math.floor(os.time() - (CurTime() - Discord.Started))
 	}
 end

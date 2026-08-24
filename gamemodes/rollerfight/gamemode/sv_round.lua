@@ -3,10 +3,68 @@ util.AddNetworkString("rf_training")
 util.AddNetworkString("rf_gametype")
 util.AddNetworkString("rf_forcestart")
 util.AddNetworkString("rf_roundend")
+util.AddNetworkString("rf_pause")
+util.AddNetworkString("rf_spectate")
 
 function RF.SetState(state, duration)
 	SetGlobalInt("rf_state", state)
 	SetGlobalFloat("rf_state_end", duration and (CurTime() + duration) or 0)
+end
+
+function RF.FreezeAll(state)
+	for _, ply in ipairs(player.GetAll()) do
+		local mine = ply.RFMine
+		if IsValid(mine) then mine:SetFrozen(state) end
+	end
+end
+
+function RF.SetPaused(state)
+	if state == GetGlobalBool("rf_paused", false) then return end
+
+	if state then
+		SetGlobalFloat("rf_pause_left", math.max(0, GetGlobalFloat("rf_state_end", 0) - CurTime()))
+	else
+		local left = GetGlobalFloat("rf_pause_left", 0)
+		if left > 0 then SetGlobalFloat("rf_state_end", CurTime() + left) end
+	end
+
+	SetGlobalBool("rf_paused", state)
+	RF.FreezeAll(state)
+end
+
+function RF.SetSpectate(ply, state)
+	ply:SetNWBool("rf_spectating", state)
+
+	if state then
+		RF.RemoveMine(ply)
+		ply:SetNWBool("rf_ready", false)
+		ply:SetNWBool("rf_training", false)
+		ply:SetMoveType(MOVETYPE_NOCLIP)
+		ply:SetViewOffset(Vector(0, 0, 64))
+		ply:SetCurrentViewOffset(Vector(0, 0, 64))
+
+		return
+	end
+
+	ply:SetViewOffset(vector_origin)
+	ply:SetCurrentViewOffset(vector_origin)
+	RF.DetachPlayer(ply)
+
+	if RF.InRound() and RF.GetGameType().lives <= 0 then
+		RF.GiveMine(ply, RF.SelectSpawnPos(ply))
+	end
+end
+
+function RF.CleanUpMap()
+	for _, ent in ipairs(ents.FindByClass("rf_mine")) do
+		ent:Remove()
+	end
+
+	game.CleanUpMap(false, {
+		"rf_mine",
+		"predicted_viewmodel",
+		"player_manager"
+	})
 end
 
 function RF.ClearReady()
@@ -32,8 +90,10 @@ function RF.StartTraining(ply)
 end
 
 function RF.EnterWaiting()
+	RF.SetPaused(false)
 	RF.SetState(RF.STATE_WAITING)
 	RF.ClearReady()
+	RF.CleanUpMap()
 
 	for _, ply in ipairs(player.GetAll()) do
 		ply:SetNWBool("rf_training", false)
@@ -56,6 +116,8 @@ end
 
 function RF.EnterCountdown()
 	local gt = RF.GetGameType()
+
+	RF.CleanUpMap()
 
 	RF.SetState(RF.STATE_COUNTDOWN, RF.Get("CountdownTime"))
 
@@ -91,7 +153,11 @@ function RF.EnterPost(reason)
 
 	for _, ply in ipairs(player.GetAll()) do
 		local mine = ply.RFMine
-		if IsValid(mine) then mine:SetFrozen(true) end
+
+		if IsValid(mine) then
+			mine:SetFrozen(true)
+			mine:ShowSelfDestruct()
+		end
 	end
 
 	net.Start("rf_roundend")
@@ -172,6 +238,8 @@ function RF.CheckWin()
 end
 
 local function Tick()
+	if GetGlobalBool("rf_paused", false) then return end
+
 	local state = RF.GetState()
 
 	if state == RF.STATE_WAITING then
@@ -239,6 +307,18 @@ net.Receive("rf_gametype", function(len, ply)
 	local cv = GetConVar("rf_gametype")
 
 	if cv then cv:SetInt(index) end
+end)
+
+net.Receive("rf_pause", function(len, ply)
+	if not RF.IsAdmin(ply) then return end
+
+	RF.SetPaused(not GetGlobalBool("rf_paused", false))
+end)
+
+net.Receive("rf_spectate", function(len, ply)
+	if not RF.IsAdmin(ply) then return end
+
+	RF.SetSpectate(ply, not ply:GetNWBool("rf_spectating", false))
 end)
 
 net.Receive("rf_forcestart", function(len, ply)

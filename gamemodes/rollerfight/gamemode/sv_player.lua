@@ -19,6 +19,8 @@ function RF.DetachPlayer(ply)
 end
 
 function RF.EnforceDetached(ply)
+	if ply:GetNWBool("rf_spectating", false) then return end
+
 	if not ply:GetNoDraw() then ply:SetNoDraw(true) end
 	if ply:GetMoveType() ~= MOVETYPE_NONE then ply:SetMoveType(MOVETYPE_NONE) end
 	if ply:GetCollisionGroup() ~= COLLISION_GROUP_IN_VEHICLE then ply:SetCollisionGroup(COLLISION_GROUP_IN_VEHICLE) end

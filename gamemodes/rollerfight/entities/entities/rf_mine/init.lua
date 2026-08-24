@@ -116,21 +116,31 @@ end
 
 function ENT:UpdateGround()
 	local pos = self:GetPos()
-	local lift = 2
-	local slack = RF.Get("GroundSlack")
+	local filter = { self, self:GetDriver() }
+	local best = 9999
 
-	local tr = util.TraceEntity({
-		start = pos + Vector(0, 0, lift),
-		endpos = pos - Vector(0, 0, slack),
-		filter = { self, self:GetDriver() },
-		mask = MASK_SOLID
-	}, self)
+	for _, sample in ipairs(RF.GroundSamples) do
+		local start = pos + sample.offset
 
-	self.Grounded = tr.Hit and not tr.StartSolid and tr.HitNormal.z > 0.5
-	self.GroundGap = self.Grounded and (tr.Fraction * (lift + slack) - lift) or 9999
+		local tr = util.TraceLine({
+			start = start,
+			endpos = start - Vector(0, 0, sample.depth + 72),
+			filter = filter,
+			mask = MASK_SOLID
+		})
+
+		if tr.Hit and tr.HitNormal.z > 0.4 then
+			local gap = (start.z - tr.HitPos.z) - sample.depth
+
+			if gap < best then best = gap end
+		end
+	end
+
+	self.GroundGap = best
+	self.Grounded = best <= RF.Get("GroundSlack")
 
 	self:SetNWBool("rf_grounded", self.Grounded)
-	self:SetNWFloat("rf_gap", self.GroundGap)
+	self:SetNWFloat("rf_gap", best)
 end
 
 function ENT:SetAttack(on)
@@ -432,6 +442,16 @@ function ENT:OnTakeDamage(dmg)
 	if self:Health() <= 0 then
 		self:BeginDetonate(dmg:GetAttacker())
 	end
+end
+
+function ENT:ShowSelfDestruct()
+	if self.Detonating or self:GetDying() then return end
+
+	self:SetDying(true)
+	self:SetAttackMode(false)
+	self:SetModel(RF.SpikeModel)
+	self:RefreshRadius()
+	self:EmitSound("npc/roller/mine/rmine_predetonate.wav", 80, 100)
 end
 
 function ENT:BeginDetonate(attacker)

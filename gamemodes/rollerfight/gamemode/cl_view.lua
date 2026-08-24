@@ -11,6 +11,12 @@ local hiddenElements = {
 }
 
 function GM:CalcView(ply, pos, angles, fov)
+	if ply:GetNWBool("rf_spectating", false) then
+		smoothPos = nil
+
+		return
+	end
+
 	local mine = ply:GetNWEntity("rf_mine")
 
 	if not IsValid(mine) then

@@ -16,6 +16,25 @@ end
 local function RoundBanner()
 	local state = RF.GetState()
 
+	if GetGlobalBool("rf_paused", false) then
+		draw.SimpleText("PAUSED", "RFHudTimer", ScrW() * 0.5, 26, Color(238, 130, 32),
+			TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+	end
+
+	if state == RF.STATE_WAITING then
+		local auto = GetGlobalFloat("rf_autostart", 0)
+		if auto <= 0 then return end
+
+		local left = math.max(0, auto - CurTime())
+
+		draw.SimpleText("MATCH STARTS IN", "RFHudSmall", ScrW() * 0.5, 22,
+			Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		draw.SimpleText(string.format("%d", math.ceil(left)), "RFHudTimer", ScrW() * 0.5, 48,
+			left < 6 and Color(240, 90, 70) or Color(238, 130, 32), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+
+		return
+	end
+
 	if state == RF.STATE_COUNTDOWN then
 		local left = math.ceil(RF.StateTimeLeft())
 		if left <= 0 then return end

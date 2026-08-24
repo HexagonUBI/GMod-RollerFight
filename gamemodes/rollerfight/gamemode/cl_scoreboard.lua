@@ -12,14 +12,6 @@ local COL_TEXT = Color(228, 228, 228)
 local COL_DIM = Color(150, 150, 150)
 local COL_ACCENT = Color(238, 130, 32)
 
-local LogoMat
-
-local function Logo()
-	if not LogoMat then LogoMat = Material("rollerfight/gt_dm.jpg", "smooth") end
-
-	return LogoMat
-end
-
 local function Box(x, y, w, h, col)
 	surface.SetDrawColor(col)
 	surface.DrawRect(x, y, w, h)
@@ -130,6 +122,33 @@ local function BuildScores(parent)
 		self.Rebuild()
 	end
 
+	local back = page:Add("DButton")
+	back:Dock(BOTTOM)
+	back:DockMargin(0, 6, 0, 0)
+	back:SetTall(34)
+	back:SetText("BACK TO READY UP")
+	RF.StyleButton(back, true)
+
+	back.Think = function(self)
+		local me = LocalPlayer()
+
+		self:SetVisible(RF.IsTraining(me) or me:GetNWBool("rf_spectating", false))
+		self:SetText(RF.IsTraining(me) and "LEAVE TRAINING, BACK TO READY UP" or "LEAVE SPECTATOR, BACK TO READY UP")
+	end
+
+	back.DoClick = function()
+		surface.PlaySound("buttons/button14.wav")
+
+		if RF.IsTraining(LocalPlayer()) then
+			net.Start("rf_training")
+		else
+			net.Start("rf_spectate")
+		end
+
+		net.SendToServer()
+		RF.Score.Close()
+	end
+
 	return page
 end
 
@@ -143,8 +162,9 @@ local function AdminButton(parent, label, action)
 	btn:SetTextColor(COL_TEXT)
 
 	btn.Paint = function(self, w, h)
-		Box(0, 0, w, h, self:IsHovered() and Color(56, 56, 56) or Color(42, 42, 42))
-		Outline(0, 0, w, h, COL_LINE)
+		Box(0, 0, w, h, self:IsHovered() and Color(60, 60, 60) or Color(42, 42, 42))
+		Outline(0, 0, w, h, self:IsHovered() and COL_ACCENT or COL_LINE)
+		self:SetTextColor(self:IsHovered() and COL_ACCENT or COL_TEXT)
 	end
 
 	btn.DoClick = action
@@ -187,6 +207,24 @@ local function BuildAdmin(parent)
 		net.Start("rf_training")
 		net.SendToServer()
 	end)
+
+	local pause = AdminButton(left, "Pause Match", function()
+		net.Start("rf_pause")
+		net.SendToServer()
+	end)
+
+	pause.Think = function(self)
+		self:SetText(GetGlobalBool("rf_paused", false) and "Resume Match" or "Pause Match")
+	end
+
+	local spec = AdminButton(left, "Spectator Freecam", function()
+		net.Start("rf_spectate")
+		net.SendToServer()
+	end)
+
+	spec.Think = function(self)
+		self:SetText(LocalPlayer():GetNWBool("rf_spectating", false) and "Leave Freecam" or "Spectator Freecam")
+	end
 
 	local toolLabel = left:Add("DLabel")
 	toolLabel:Dock(TOP)
@@ -276,31 +314,36 @@ function Score.Open()
 		Box(0, 0, pw, ph, COL_BG)
 		Outline(0, 0, pw, ph, COL_LINE)
 
-		Box(0, 0, pw, 62, Color(10, 10, 10, 255))
+		Box(0, 0, pw, 72, Color(10, 10, 10, 255))
 
-		surface.SetDrawColor(255, 255, 255, 40)
-		surface.SetMaterial(Logo())
-		surface.DrawTexturedRect(0, 0, pw, 62)
+		surface.SetDrawColor(255, 255, 255, 26)
+		surface.SetMaterial(RF.Mat("rollerfight/gt_dm.jpg"))
+		surface.DrawTexturedRect(0, 0, pw, 72)
 
-		Box(0, 61, pw, 2, COL_ACCENT)
+		Box(0, 70, pw, 2, COL_ACCENT)
 
-		draw.SimpleText("ROLLERFIGHT", "RFTitle", 16, 20, COL_TEXT, 0, 0)
-		draw.SimpleText(RF.GetGameType().name .. "  |  " .. game.GetMap(), "RFSmall", 17, 42, COL_ACCENT, 0, 0)
+		surface.SetDrawColor(255, 255, 255, 255)
+		surface.SetMaterial(RF.Mat("rollerfight/logo.png"))
+		surface.DrawTexturedRect(14, 12, 132, 48)
+
+		draw.SimpleText(RF.GetGameType().name .. "  |  " .. game.GetMap(), "RFSmall", 156, 44, COL_ACCENT, 0, 0)
 
 		local state = RF.StateNames[RF.GetState()] or ""
 		local left = RF.StateTimeLeft()
 
-		draw.SimpleText(string.upper(state), "RFHead", pw - 16, 20, COL_TEXT, TEXT_ALIGN_RIGHT, 0)
+		if GetGlobalBool("rf_paused", false) then state = "Paused" end
+
+		draw.SimpleText(string.upper(state), "RFHead", pw - 16, 22, COL_TEXT, TEXT_ALIGN_RIGHT, 0)
 
 		if left > 0 then
 			draw.SimpleText(string.format("%d:%02d", math.floor(left / 60), math.floor(left % 60)),
-				"RFSmall", pw - 16, 42, COL_ACCENT, TEXT_ALIGN_RIGHT, 0)
+				"RFSmall", pw - 16, 44, COL_ACCENT, TEXT_ALIGN_RIGHT, 0)
 		end
 	end
 
 	local tabs = Board:Add("DPanel")
 	tabs:Dock(TOP)
-	tabs:DockMargin(10, 70, 10, 6)
+	tabs:DockMargin(10, 80, 10, 6)
 	tabs:SetTall(28)
 	tabs.Paint = function() end
 
@@ -356,10 +399,26 @@ function GM:ScoreboardShow()
 end
 
 function GM:ScoreboardHide()
+	if Score.Forced then return true end
+
 	Score.Close()
 
 	return true
 end
+
+timer.Create("RF.ScoreAuto", 0.3, 0, function()
+	if not IsValid(LocalPlayer()) then return end
+
+	local post = RF.GetState() == RF.STATE_POST
+
+	if post and not IsValid(Board) then
+		Score.Open()
+		Score.Forced = true
+	elseif not post and Score.Forced then
+		Score.Forced = false
+		Score.Close()
+	end
+end)
 
 concommand.Add("rf_scoreboard", function()
 	if IsValid(Board) then Score.Close() else Score.Open() end

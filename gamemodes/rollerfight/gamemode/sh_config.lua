@@ -8,6 +8,18 @@ RF.GlowTexture = "models/roller/rollermine_glow"
 RF.DeathColor = Color(255, 55, 45)
 RF.MineRadius = 12.56
 
+local r = RF.MineRadius
+local ring = r * 0.6
+local ringDepth = math.sqrt(r * r - ring * ring)
+
+RF.GroundSamples = {
+	{ offset = Vector(0, 0, 0), depth = r },
+	{ offset = Vector(ring, 0, 0), depth = ringDepth },
+	{ offset = Vector(-ring, 0, 0), depth = ringDepth },
+	{ offset = Vector(0, ring, 0), depth = ringDepth },
+	{ offset = Vector(0, -ring, 0), depth = ringDepth }
+}
+
 RF.SpawnClasses = {
 	"info_player_start",
 	"info_player_deathmatch",
