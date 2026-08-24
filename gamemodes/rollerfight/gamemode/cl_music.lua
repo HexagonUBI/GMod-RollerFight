@@ -21,10 +21,23 @@ function Music.Enabled()
 	return Music.Volume() > 0.001
 end
 
-function Music.BedVolume()
-	local duck = CurTime() < Music.DuckUntil and RF.MusicDuck or 1
+Music.Duck = 1
 
-	return Music.Volume() * RF.MusicBedVolume * duck
+function Music.BedVolume()
+	return Music.Volume() * RF.MusicBedVolume * Music.Duck
+end
+
+function Music.StepDuck()
+	local target = CurTime() < Music.DuckUntil and RF.MusicDuck or 1
+	local step = 0.05 / math.max(0.05, RF.MusicDuckRamp)
+
+	if math.abs(Music.Duck - target) < 0.005 then
+		Music.Duck = target
+	else
+		Music.Duck = Music.Duck + (target - Music.Duck > 0 and step or -step)
+	end
+
+	if IsValid(Music.Bed) then Music.Bed:SetVolume(Music.BedVolume()) end
 end
 
 function Music.StopBed()
@@ -200,10 +213,6 @@ function Music.Update()
 		return
 	end
 
-	if IsValid(Music.Bed) then
-		Music.Bed:SetVolume(Music.BedVolume())
-	end
-
 	local state = RF.GetState()
 	local mood = Music.MoodFor()
 
@@ -228,7 +237,10 @@ function Music.Update()
 end
 
 timer.Create("RF.MusicDirector", 0.5, 0, Music.Update)
-timer.Create("RF.MusicFade", 0.05, 0, Music.StepFade)
+timer.Create("RF.MusicFade", 0.05, 0, function()
+	Music.StepFade()
+	Music.StepDuck()
+end)
 
 concommand.Add("rf_music_skip", function()
 	Music.PlayBed(Music.MoodFor(), true)

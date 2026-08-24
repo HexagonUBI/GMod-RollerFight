@@ -229,7 +229,6 @@ function ENT:TryDash()
 
 	if self:GetAttackMode() then
 		self.DashAttackUntil = now + RF.Get("DashAttackHold")
-		self.DashLeftGround = false
 	end
 
 	phys:ApplyForceCenter(Angle(self.RFInput.Pitch, self.RFInput.Yaw, 0):Forward() * RF.Get("DashForce"))
@@ -297,18 +296,20 @@ function ENT:DriveRoll()
 	end
 end
 
-function ENT:UpdateDashAttack()
+function ENT:EndDashAttack()
 	if not self.DashAttackUntil then return end
 
-	if not self.Grounded then self.DashLeftGround = true end
-
-	if CurTime() < self.DashAttackUntil and not (self.DashLeftGround and self.Grounded) then return end
-
 	self.DashAttackUntil = nil
-	self.DashLeftGround = nil
 
 	self:SetAttack(false)
 	self:SetAttackLockEnd(CurTime() + RF.Get("DashAttackLock"))
+end
+
+function ENT:UpdateDashAttack()
+	if not self.DashAttackUntil then return end
+	if CurTime() < self.DashAttackUntil then return end
+
+	self:EndDashAttack()
 end
 
 function ENT:UpdateEnergy(dt)
@@ -443,6 +444,8 @@ function ENT:HitMine(other, pos)
 
 	other:TakeDamageInfo(dmg)
 	self:EmitSound("npc/roller/mine/rmine_explode_shock1.wav", 75, 100)
+
+	self:EndDashAttack()
 
 	local shock = EffectData()
 	shock:SetEntity(self)

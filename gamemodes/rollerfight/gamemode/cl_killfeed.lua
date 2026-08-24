@@ -6,6 +6,18 @@ Feed.Entries = {}
 
 surface.CreateFont("RFFeed", { font = "Verdana", size = 15, weight = 700, antialias = true })
 
+local ROW, ICON = 24, 20
+
+RF.CauseIcon = {
+	contact = "contact",
+	dash = "dash",
+	blast = "blast",
+	water = "water",
+	world = "world",
+	zone = "zone",
+	self = "self"
+}
+
 RF.CauseText = {
 	contact = "rammed",
 	dash = "dashed into",
@@ -33,8 +45,10 @@ net.Receive("rf_kill", function()
 	Push({
 		Killer = net.ReadString(),
 		KillerTeam = net.ReadUInt(8),
+		KillerColor = net.ReadUInt(8),
 		Victim = net.ReadString(),
 		VictimTeam = net.ReadUInt(8),
+		VictimColor = net.ReadUInt(8),
 		Cause = net.ReadString(),
 		Assist = net.ReadString()
 	})
@@ -42,8 +56,15 @@ end)
 
 net.Receive("rf_feedclear", Feed.Clear)
 
-local function TeamColor(id)
-	return RF.TeamColors[id] or Color(210, 210, 210)
+local function FeedColor(entry, victim)
+	local col = victim and entry.VictimColor or entry.KillerColor
+
+	if col and col ~= 0 then
+		local picked = RF.FFAColors[col]
+		if picked then return picked end
+	end
+
+	return RF.TeamColors[victim and entry.VictimTeam or entry.KillerTeam] or Color(210, 210, 210)
 end
 
 function GM:HUDDrawTargetID()
@@ -69,50 +90,50 @@ hook.Add("HUDPaint", "RF.Killfeed", function()
 
 		if age > life - 1 then alpha = 255 * math.max(0, life - age) end
 
-		local verb = RF.CauseText[entry.Cause] or "destroyed"
-		local killer = entry.Killer
+		local icon = RF.Mat("rollerfight/feed/" .. (RF.CauseIcon[entry.Cause] or "world") .. ".png")
 		local parts = {}
 
-		if killer == "" then
-			parts = {
-				{ verb, Color(210, 190, 120, alpha) },
-				{ " " .. entry.Victim, TeamColor(entry.VictimTeam) }
-			}
-		else
-			parts = {
-				{ killer, TeamColor(entry.KillerTeam) },
-				{ "  " .. verb .. "  ", Color(210, 190, 120, alpha) },
-				{ entry.Victim, TeamColor(entry.VictimTeam) }
-			}
+		if entry.Killer ~= "" then
+			table.insert(parts, { text = entry.Killer, col = FeedColor(entry, false) })
 		end
+
+		table.insert(parts, { icon = true })
+		table.insert(parts, { text = entry.Victim, col = FeedColor(entry, true) })
 
 		if entry.Assist ~= "" then
-			table.insert(parts, { "  (+" .. entry.Assist .. ")", Color(150, 150, 150, alpha) })
+			table.insert(parts, { text = "+" .. entry.Assist, col = Color(150, 150, 150) })
 		end
-
-		local width = 0
 
 		surface.SetFont("RFFeed")
 
+		local pad = 8
+		local width = 0
+
 		for _, part in ipairs(parts) do
-			width = width + select(1, surface.GetTextSize(part[1]))
+			width = width + (part.icon and ICON or select(1, surface.GetTextSize(part.text))) + pad
 		end
 
-		local rowY = y + (index - 1) * 24
+		local rowY = y + (index - 1) * (ROW + 4)
 
-		surface.SetDrawColor(12, 12, 12, math.min(190, alpha))
-		surface.DrawRect(x - width - 12, rowY - 3, width + 16, 22)
+		surface.SetDrawColor(12, 12, 12, math.min(200, alpha))
+		surface.DrawRect(x - width - 10, rowY, width + 14, ROW)
 
 		surface.SetDrawColor(238, 130, 32, math.min(220, alpha))
-		surface.DrawRect(x + 2, rowY - 3, 2, 22)
+		surface.DrawRect(x + 4, rowY, 2, ROW)
 
-		local cursor = x - width - 4
+		local cursor = x - width - 2
 
 		for _, part in ipairs(parts) do
-			local col = part[2]
-
-			draw.SimpleText(part[1], "RFFeed", cursor, rowY, Color(col.r, col.g, col.b, alpha), 0, 0)
-			cursor = cursor + select(1, surface.GetTextSize(part[1]))
+			if part.icon then
+				surface.SetDrawColor(255, 255, 255, alpha)
+				surface.SetMaterial(icon)
+				surface.DrawTexturedRect(cursor, rowY + (ROW - ICON) * 0.5, ICON, ICON)
+				cursor = cursor + ICON + pad
+			else
+				draw.SimpleText(part.text, "RFFeed", cursor, rowY + ROW * 0.5,
+					Color(part.col.r, part.col.g, part.col.b, alpha), 0, TEXT_ALIGN_CENTER)
+				cursor = cursor + select(1, surface.GetTextSize(part.text)) + pad
+			end
 		end
 	end
 end)

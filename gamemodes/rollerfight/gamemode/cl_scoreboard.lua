@@ -98,7 +98,7 @@ local function BuildScores(parent)
 
 			row.Paint = function(self, w, h)
 				Box(0, 0, w, h, self:IsHovered() and Color(54, 54, 54) or (index % 2 == 0 and COL_ROWALT or COL_ROW))
-				Box(0, 0, 4, h, RF.TeamColors[ply:Team()] or COL_DIM)
+				Box(0, 0, 4, h, RF.PlayerColor(ply))
 				Outline(36, 5, 36, 36, Color(90, 90, 90))
 
 				if ply == LocalPlayer() then Outline(0, 0, w, h, COL_ACCENT) end

@@ -17,8 +17,14 @@ function ENT:SetupDataTables()
 	self:NetworkVar("Float", 0, "Energy")
 	self:NetworkVar("Float", 1, "AttackLockEnd")
 	self:NetworkVar("Int", 0, "MineTeam")
+	self:NetworkVar("Int", 1, "ColorIndex")
 end
 
 function ENT:GetTeamColor()
+	if self:GetMineTeam() == TEAM_FREE then
+		local col = RF.FFAColors[self:GetColorIndex()]
+		if col then return col end
+	end
+
 	return RF.TeamColors[self:GetMineTeam()] or RF.TeamColors[TEAM_FREE]
 end

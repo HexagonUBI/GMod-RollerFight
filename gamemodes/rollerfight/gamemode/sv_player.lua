@@ -93,6 +93,25 @@ function RF.RemoveMine(ply)
 	end
 end
 
+function RF.AssignColor(ply)
+	if ply:GetNWInt("rf_color", 0) > 0 then return end
+
+	local taken = {}
+
+	for _, other in ipairs(player.GetAll()) do
+		if other ~= ply then taken[other:GetNWInt("rf_color", 0)] = true end
+	end
+
+	for index = 1, #RF.FFAColors do
+		if not taken[index] then
+			ply:SetNWInt("rf_color", index)
+			return
+		end
+	end
+
+	ply:SetNWInt("rf_color", math.random(#RF.FFAColors))
+end
+
 function RF.GiveMine(ply, pos)
 	RF.RemoveMine(ply)
 
@@ -103,8 +122,11 @@ function RF.GiveMine(ply, pos)
 	mine:SetAngles(Angle(0, ply:EyeAngles().y, 0))
 	mine:Spawn()
 	mine:Activate()
+	RF.AssignColor(ply)
+
 	mine:SetDriver(ply)
 	mine:SetMineTeam(ply:Team())
+	mine:SetColorIndex(ply:GetNWInt("rf_color", 0))
 
 	ply.RFMine = mine
 	ply:SetNWEntity("rf_mine", mine)
@@ -118,8 +140,10 @@ function RF.KillFeed(killer, victim, cause, assist)
 	net.Start("rf_kill")
 	net.WriteString(IsValid(killer) and killer:Nick() or "")
 	net.WriteUInt(IsValid(killer) and killer:Team() or 0, 8)
+	net.WriteUInt(IsValid(killer) and killer:GetNWInt("rf_color", 0) or 0, 8)
 	net.WriteString(IsValid(victim) and victim:Nick() or "A rollermine")
 	net.WriteUInt(IsValid(victim) and victim:Team() or 0, 8)
+	net.WriteUInt(IsValid(victim) and victim:GetNWInt("rf_color", 0) or 0, 8)
 	net.WriteString(cause or "world")
 	net.WriteString(IsValid(assist) and assist:Nick() or "")
 	net.Broadcast()
@@ -144,7 +168,6 @@ function RF.OnMineDestroyed(mine, attacker, cause, assist)
 	ply.RFMine = nil
 	ply:SetNWEntity("rf_mine", NULL)
 	ply:AddDeaths(1)
-	RF.MusicCue(ply, "death")
 
 	if RF.IsTraining(ply) then
 		timer.Simple(1, function()
@@ -178,6 +201,7 @@ end
 
 function GM:PlayerInitialSpawn(ply)
 	ply:SetTeam(TEAM_FREE)
+	RF.AssignColor(ply)
 end
 
 function GM:PlayerSpawn(ply, transition)

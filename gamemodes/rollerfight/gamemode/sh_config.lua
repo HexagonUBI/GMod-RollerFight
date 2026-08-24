@@ -53,6 +53,7 @@ RF.MusicDuck = 0.25
 RF.MusicDuckTime = 4
 RF.MusicStingGap = 6
 RF.MusicFadeTime = 3
+RF.MusicDuckRamp = 0.5
 
 RF.MusicBeds = {
 	lobby = {
@@ -95,7 +96,6 @@ RF.MusicBeds = {
 RF.MusicStings = {
 	spawn = "music/stingers/hl1_stinger_song7.mp3",
 	kill = "music/stingers/hl1_stinger_song8.mp3",
-	death = "music/stingers/hl1_stinger_song16.mp3",
 	intermission = "music/vlvx_song20.mp3",
 	roundstart = "music/vlvx_song4.mp3",
 	roundover = "music/vlvx_song3.mp3"
@@ -136,7 +136,7 @@ RF.VarList = {
 	{ key = "DashWindow", group = "Combat", label = "Dash Hit Window", default = 0.9, min = 0, max = 5 },
 	{ key = "DashAttackHold", group = "Combat", label = "Dash Attack Hold", default = 1, min = 0, max = 10 },
 	{ key = "FriendlyFire", group = "Combat", label = "Friendly Fire", default = 0, min = 0, max = 1 },
-	{ key = "WaterKillLevel", group = "Combat", label = "Water Kill Level", default = 1, min = 0, max = 3 },
+	{ key = "WaterKillLevel", group = "Combat", label = "Water Kill Level (3 submerged)", default = 3, min = 0, max = 3 },
 	{ key = "DeathJumpForce", group = "Combat", label = "Death Jump Force", default = 30000, min = 0, max = 150000 },
 	{ key = "DeathDelay", group = "Combat", label = "Death Blink Time", default = 0.7, min = 0.1, max = 5 },
 	{ key = "ShockSize", group = "Combat", label = "Shock Beam Width", default = 18, min = 1, max = 60 },

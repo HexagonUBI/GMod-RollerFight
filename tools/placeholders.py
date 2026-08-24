@@ -122,6 +122,52 @@ def ic_spectate(d, s, accent):
     d.ellipse([s * 0.38, s * 0.38, s * 0.62, s * 0.62], fill=accent)
 
 
+def fd_contact(d, s, a):
+    mine(d, int(s * 0.34), s // 2, int(s * 0.17), a, False)
+    mine(d, int(s * 0.66), s // 2, int(s * 0.17), a, False)
+    d.line([(s * 0.5, s * 0.22), (s * 0.5, s * 0.78)], fill=a, width=max(2, s // 14))
+
+
+def fd_dash(d, s, a):
+    for i in range(3):
+        x = s * (0.24 + i * 0.2)
+        d.polygon([(x, s * 0.28), (x + s * 0.18, s * 0.5), (x, s * 0.72)], fill=a)
+
+
+def fd_blast(d, s, a):
+    import math as _m
+    pts = []
+    for i in range(12):
+        ang = _m.radians(i * 30)
+        r = s * (0.42 if i % 2 == 0 else 0.2)
+        pts.append((s * 0.5 + _m.cos(ang) * r, s * 0.5 + _m.sin(ang) * r))
+    d.polygon(pts, fill=a)
+
+
+def fd_water(d, s, a):
+    for row in range(3):
+        y = s * (0.34 + row * 0.18)
+        d.line([(s * 0.14, y), (s * 0.34, y - s * 0.08), (s * 0.5, y),
+                (s * 0.66, y - s * 0.08), (s * 0.86, y)], fill=a, width=max(2, s // 14))
+
+
+def fd_world(d, s, a):
+    d.line([(s * 0.26, s * 0.26), (s * 0.74, s * 0.74)], fill=a, width=max(3, s // 10))
+    d.line([(s * 0.26, s * 0.74), (s * 0.74, s * 0.26)], fill=a, width=max(3, s // 10))
+
+
+def fd_zone(d, s, a):
+    for i in range(0, int(s), max(4, int(s // 7))):
+        d.line([(i, s * 0.2), (min(s, i + s // 12), s * 0.2)], fill=a, width=3)
+        d.line([(i, s * 0.8), (min(s, i + s // 12), s * 0.8)], fill=a, width=3)
+    d.polygon([(s * 0.42, s * 0.36), (s * 0.78, s * 0.5), (s * 0.42, s * 0.64)], fill=a)
+
+
+def fd_self(d, s, a):
+    mine(d, s // 2, int(s * 0.56), int(s * 0.24), a)
+    d.rectangle([s * 0.46, s * 0.1, s * 0.54, s * 0.3], fill=a)
+
+
 def ic_pause(d, s, accent):
     d.rectangle([s * 0.28, s * 0.24, s * 0.43, s * 0.76], fill=accent)
     d.rectangle([s * 0.57, s * 0.24, s * 0.72, s * 0.76], fill=accent)
@@ -145,6 +191,24 @@ def main():
     icon(os.path.join(UI, "ph_training.png"), 48, "training", ic_training, (238, 130, 32, 255))
     icon(os.path.join(UI, "ph_spectate.png"), 48, "spectate", ic_spectate, (150, 170, 220, 255))
     icon(os.path.join(UI, "ph_pause.png"), 48, "pause", ic_pause, (238, 130, 32, 255))
+
+    print("killfeed icons")
+    feed = os.path.join(MATS, "feed")
+    os.makedirs(feed, exist_ok=True)
+    white = (255, 255, 255, 255)
+    for name, painter in (
+        ("contact", fd_contact),
+        ("dash", fd_dash),
+        ("blast", fd_blast),
+        ("water", fd_water),
+        ("world", fd_world),
+        ("zone", fd_zone),
+        ("self", fd_self),
+    ):
+        img = Image.new("RGBA", (40, 40), (0, 0, 0, 0))
+        painter(ImageDraw.Draw(img), 40, white)
+        img.save(os.path.join(feed, name + ".png"), optimize=True)
+        print("  %-26s 40x40" % (name + ".png"))
 
     for stale in ("ph_banner.png", "ph_watermark.png"):
         path = os.path.join(UI, stale)
