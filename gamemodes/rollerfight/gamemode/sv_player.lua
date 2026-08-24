@@ -29,16 +29,6 @@ function RF.EnforceDetached(ply)
 	if IsValid(ply:GetVehicle()) then ply:ExitVehicle() end
 end
 
-RF.SpawnClasses = {
-	"info_player_start",
-	"info_player_deathmatch",
-	"info_player_combine",
-	"info_player_rebel",
-	"info_player_counterterrorist",
-	"info_player_terrorist",
-	"gmod_player_start"
-}
-
 function RF.SpawnClear(pos)
 	for _, ent in ipairs(ents.FindInSphere(pos, 56)) do
 		if ent:GetClass() == "rf_mine" then return false end
@@ -120,11 +110,33 @@ function RF.OnMineDestroyed(mine, attacker)
 	ply:AddDeaths(1)
 	RF.MusicCue(ply, "death")
 
+	if RF.IsTraining(ply) then
+		timer.Simple(1, function()
+			if IsValid(ply) and RF.IsTraining(ply) then RF.GiveMine(ply, RF.SelectSpawnPos(ply)) end
+		end)
+
+		return
+	end
+
+	if not RF.InRound() then return end
+
+	local lives = ply:GetNWInt("rf_lives", 0)
+
+	if RF.GetGameType().lives > 0 then
+		ply:SetNWInt("rf_lives", math.max(0, lives - 1))
+		timer.Simple(0.2, RF.CheckWin)
+
+		return
+	end
+
 	local delay = RF.Get("RespawnTime")
 	if delay <= 0 then delay = 0.1 end
 
 	timer.Simple(delay, function()
-		if IsValid(ply) and ply:Alive() then RF.GiveMine(ply, RF.SelectSpawnPos(ply)) end
+		if not IsValid(ply) or not ply:Alive() then return end
+		if not RF.InRound() then return end
+
+		RF.GiveMine(ply, RF.SelectSpawnPos(ply))
 	end)
 end
 
@@ -134,7 +146,11 @@ end
 
 function GM:PlayerSpawn(ply, transition)
 	self.BaseClass.PlayerSpawn(self, ply, transition)
-	RF.GiveMine(ply)
+	RF.DetachPlayer(ply)
+
+	if RF.InRound() and RF.GetGameType().lives <= 0 then
+		RF.GiveMine(ply, RF.SelectSpawnPos(ply))
+	end
 end
 
 function GM:PlayerLoadout(ply)

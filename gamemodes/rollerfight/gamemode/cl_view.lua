@@ -15,7 +15,8 @@ function GM:CalcView(ply, pos, angles, fov)
 
 	if not IsValid(mine) then
 		smoothPos = nil
-		return
+
+		return RF.Cam and RF.Cam.View(fov)
 	end
 
 	local focus = mine:GetPos() + Vector(0, 0, RF.Get("CameraHeight"))

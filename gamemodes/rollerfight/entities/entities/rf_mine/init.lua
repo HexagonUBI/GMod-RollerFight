@@ -43,8 +43,22 @@ function ENT:RefreshRadius()
 	self.PhysRadius = RF.MineRadius
 end
 
+function ENT:SetFrozen(state)
+	self:SetLocked(state)
+
+	local phys = self:GetPhysicsObject()
+	if not IsValid(phys) then return end
+
+	if state then
+		phys:EnableMotion(false)
+	else
+		phys:EnableMotion(true)
+		phys:Wake()
+	end
+end
+
 function ENT:ReadCommand(cmd)
-	if self.Detonating then return end
+	if self.Detonating or self:GetLocked() then return end
 
 	local buttons = cmd:GetButtons()
 	local pressed = bit.band(buttons, bit.bnot(self.LastButtons))
@@ -297,7 +311,7 @@ function ENT:Think()
 	driver:SetPos(self:GetPos())
 	if RF.EnforceDetached then RF.EnforceDetached(driver) end
 
-	if not self:GetBuried() and not self.Detonating then
+	if not self:GetBuried() and not self.Detonating and not self:GetLocked() then
 		self:UpdateGround()
 		self:DriveRoll()
 		self:UpdateDashAttack()

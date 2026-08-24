@@ -1,4 +1,6 @@
 surface.CreateFont("RFHudSmall", { font = "Verdana", size = 17, weight = 700, antialias = true })
+surface.CreateFont("RFHudTimer", { font = "Verdana", size = 30, weight = 800, antialias = true })
+surface.CreateFont("RFCount", { font = "Verdana", size = 86, weight = 800, antialias = true })
 
 local function Bar(x, y, w, h, frac, col)
 	surface.SetDrawColor(0, 0, 0, 170)
@@ -11,7 +13,61 @@ local function Bar(x, y, w, h, frac, col)
 	surface.DrawOutlinedRect(x, y, w, h)
 end
 
+local function RoundBanner()
+	local state = RF.GetState()
+
+	if state == RF.STATE_COUNTDOWN then
+		local left = math.ceil(RF.StateTimeLeft())
+		if left <= 0 then return end
+
+		local pulse = 1 - (RF.StateTimeLeft() % 1)
+
+		draw.SimpleText(left, "RFCount", ScrW() * 0.5, ScrH() * 0.36,
+			Color(238, 130, 32, 255 - pulse * 120), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		draw.SimpleText("GET READY", "RFHudSmall", ScrW() * 0.5, ScrH() * 0.36 + 60,
+			Color(230, 230, 230), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+
+		return
+	end
+
+	if state == RF.STATE_INTERMISSION then
+		draw.SimpleText(string.upper(RF.GetGameType().name), "RFCount", ScrW() * 0.5, ScrH() * 0.5,
+			Color(238, 130, 32), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+
+		return
+	end
+
+	if state == RF.STATE_POST then
+		draw.SimpleText("ROUND OVER", "RFCount", ScrW() * 0.5, ScrH() * 0.2,
+			Color(238, 130, 32), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+
+		if RF.RoundReason and RF.RoundReason ~= "" then
+			draw.SimpleText(RF.RoundReason, "RFHudTimer", ScrW() * 0.5, ScrH() * 0.2 + 62,
+				Color(230, 230, 230), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		end
+
+		draw.SimpleText("Scoreboard is on TAB", "RFHudSmall", ScrW() * 0.5, ScrH() * 0.2 + 96,
+			Color(150, 150, 150), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+
+		return
+	end
+
+	if state ~= RF.STATE_ACTIVE then return end
+
+	local left = RF.StateTimeLeft()
+
+	draw.SimpleText(string.format("%d:%02d", math.floor(left / 60), math.floor(left % 60)),
+		"RFHudTimer", ScrW() * 0.5, 24, left < 30 and Color(240, 90, 70) or Color(230, 230, 230),
+		TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+end
+
+net.Receive("rf_roundend", function()
+	RF.RoundReason = net.ReadString()
+end)
+
 function GM:HUDPaint()
+	RoundBanner()
+
 	local ply = LocalPlayer()
 	local mine = ply:GetNWEntity("rf_mine")
 
@@ -19,7 +75,10 @@ function GM:HUDPaint()
 	local w, h = 260, 22
 
 	if not IsValid(mine) then
-		draw.SimpleText("DESTROYED", "RFHudSmall", x, y, Color(255, 90, 70), 0, 0)
+		if RF.GetState() == RF.STATE_ACTIVE then
+			draw.SimpleText("DESTROYED", "RFHudSmall", x, y, Color(255, 90, 70), 0, 0)
+		end
+
 		return
 	end
 

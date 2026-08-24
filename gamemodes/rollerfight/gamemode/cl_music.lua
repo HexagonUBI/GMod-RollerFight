@@ -123,6 +123,11 @@ function Music.MoodFor()
 	local ply = LocalPlayer()
 	if not IsValid(ply) then return "waiting" end
 
+	local state = RF.GetState()
+
+	if state == RF.STATE_WAITING and not RF.IsTraining(ply) then return "lobby" end
+	if state == RF.STATE_POST then return "lobby" end
+
 	local mine = ply:GetNWEntity("rf_mine")
 	if not IsValid(mine) or mine:GetDying() then return "waiting" end
 

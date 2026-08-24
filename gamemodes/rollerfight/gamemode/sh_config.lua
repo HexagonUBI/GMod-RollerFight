@@ -8,6 +8,16 @@ RF.GlowTexture = "models/roller/rollermine_glow"
 RF.DeathColor = Color(255, 55, 45)
 RF.MineRadius = 12.56
 
+RF.SpawnClasses = {
+	"info_player_start",
+	"info_player_deathmatch",
+	"info_player_combine",
+	"info_player_rebel",
+	"info_player_counterterrorist",
+	"info_player_terrorist",
+	"gmod_player_start"
+}
+
 RF.DiscordAppID = "1541518230764658788"
 
 RF.DiscordTeamIcon = {
@@ -22,6 +32,11 @@ RF.MusicDuckTime = 4
 RF.MusicStingGap = 6
 
 RF.MusicBeds = {
+	lobby = {
+		"music/hl2_song2.mp3",
+		"music/hl2_song3.mp3",
+		"music/hl2_song26_trainstation1.mp3"
+	},
 	waiting = {
 		"music/hl2_song2.mp3",
 		"music/hl2_song3.mp3",
@@ -46,7 +61,9 @@ RF.MusicBeds = {
 RF.MusicStings = {
 	spawn = "music/stingers/hl1_stinger_song7.mp3",
 	kill = "music/stingers/hl1_stinger_song8.mp3",
-	death = "music/stingers/hl1_stinger_song16.mp3"
+	death = "music/stingers/hl1_stinger_song16.mp3",
+	intermission = "music/stingers/hl1_stinger_song27.mp3",
+	roundstart = "music/stingers/hl1_stinger_song28.mp3"
 }
 
 RF.BodyBias = Vector(0.49, 0.93, 1.00)
@@ -114,11 +131,21 @@ RF.VarList = {
 	{ key = "BurrowCooldown", group = "Digging", label = "Burrow Cooldown", default = 1, min = 0, max = 10 },
 
 	{ key = "RespawnTime", group = "Round", label = "Respawn Seconds", default = 10, min = 0, max = 120 },
+	{ key = "GameType", group = "Round", label = "Gametype (1 DM, 2 TDM, 3 LOTS)", default = 1, min = 1, max = 3 },
+	{ key = "RoundTime", group = "Round", label = "Round Length", default = 300, min = 30, max = 3600 },
+	{ key = "ScoreLimit", group = "Round", label = "Score Limit (0 off)", default = 15, min = 0, max = 200 },
+	{ key = "AutoStartTime", group = "Round", label = "Auto Start Countdown", default = 30, min = 5, max = 300 },
+	{ key = "IntermissionTime", group = "Round", label = "Intermission Length", default = 8, min = 2, max = 30 },
+	{ key = "CountdownTime", group = "Round", label = "Countdown Length", default = 3, min = 1, max = 10 },
+	{ key = "PostTime", group = "Round", label = "Stats Screen Length", default = 12, min = 3, max = 60 },
 
 	{ key = "CameraDistance", group = "Camera", label = "Camera Distance", default = 95, min = 40, max = 400, realm = "client" },
 	{ key = "CameraHeight", group = "Camera", label = "Camera Height", default = 22, min = -50, max = 150, realm = "client" },
 	{ key = "CameraSmooth", group = "Camera", label = "Camera Smoothing", default = 9, min = 1, max = 60, realm = "client" },
 	{ key = "CameraSmoothVertical", group = "Camera", label = "Vertical Smoothing", default = 4, min = 1, max = 60, realm = "client" },
+	{ key = "LobbyShot", group = "Camera", label = "Lobby Shot Length", default = 14, min = 3, max = 60, realm = "client" },
+	{ key = "IntermissionShot", group = "Camera", label = "Intermission Shot Length", default = 1.6, min = 0.4, max = 6, realm = "client" },
+	{ key = "LobbyCamHeight", group = "Camera", label = "Lobby Camera Height", default = 70, min = 8, max = 300, realm = "client" },
 
 	{ key = "TeamTint", group = "Look", label = "Team Color Strength", default = 1.2, min = 0.2, max = 4, realm = "client" },
 	{ key = "GlowSize", group = "Look", label = "Glow Sprite Size", default = 34, min = 0, max = 120, realm = "client" },
