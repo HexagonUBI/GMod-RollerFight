@@ -9,6 +9,7 @@ RF = RF or {}
 include("sh_config.lua")
 include("sh_teams.lua")
 include("sh_compat.lua")
+include("sh_movement.lua")
 
 function RF.IsAdmin(ply)
 	if not IsValid(ply) then return false end
@@ -26,6 +27,18 @@ function GM:PlayerCanPickupWeapon()
 end
 
 function GM:PlayerFootstep()
+	return true
+end
+
+function GM:PrePlayerDraw(ply)
+	if IsValid(ply:GetNWEntity("rf_mine")) then return true end
+end
+
+function GM:CanPlayerEnterVehicle()
+	return false
+end
+
+function GM:PlayerCanSeePlayersChat()
 	return true
 end
 

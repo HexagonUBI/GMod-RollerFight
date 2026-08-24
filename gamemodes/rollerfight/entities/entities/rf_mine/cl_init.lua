@@ -51,7 +51,44 @@ function ENT:Initialize()
 	self:SetNextClientThink(CurTime())
 end
 
+function ENT:UpdateLamp()
+	if not self:GetLamp() then return end
+
+	local pos = self:GetPos()
+	local size = RF.Get("LampSize")
+	local brightness = RF.Get("LampBrightness")
+
+	local world = DynamicLight(self:EntIndex())
+
+	if world then
+		world.Pos = pos
+		world.r = 255
+		world.g = 244
+		world.b = 214
+		world.Brightness = brightness
+		world.Size = size
+		world.Decay = 0
+		world.Style = 0
+		world.DieTime = CurTime() + 0.2
+	end
+
+	local models = DynamicLight(self:EntIndex() + 30000, true)
+
+	if models then
+		models.Pos = pos
+		models.r = 255
+		models.g = 244
+		models.b = 214
+		models.Brightness = brightness * 0.8
+		models.Size = size
+		models.Decay = 0
+		models.Style = 0
+		models.DieTime = CurTime() + 0.2
+	end
+end
+
 function ENT:Think()
+	local now = CurTime()
 	local speed = self:GetVelocity():Length()
 
 	if speed > 40 and not self:GetBuried() then
@@ -60,7 +97,14 @@ function ENT:Think()
 		self.MoveLoop:Stop()
 	end
 
-	self:SetNextClientThink(CurTime() + 0.1)
+	self:UpdateLamp()
+
+	if now >= (self.NextSkinCheck or 0) then
+		self.NextSkinCheck = now + 0.5
+		self.SkinStamp = nil
+	end
+
+	self:SetNextClientThink(now + 0.05)
 
 	return true
 end
@@ -92,6 +136,7 @@ function ENT:ApplySkin(col)
 end
 
 function ENT:Draw()
+	self:UpdateLamp()
 	self:ApplySkin(self:PaintColor())
 	self:DrawModel()
 end

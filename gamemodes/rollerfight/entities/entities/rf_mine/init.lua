@@ -38,16 +38,9 @@ end
 
 function ENT:RefreshRadius()
 	local maxs = self:OBBMaxs()
+
 	self.Radius = math.max(maxs.x, maxs.y, maxs.z)
-
-	local phys = self:GetPhysicsObject()
-
-	if IsValid(phys) then
-		local pmins, pmaxs = phys:GetAABB()
-		self.PhysRadius = math.max(pmaxs.x - pmins.x, pmaxs.y - pmins.y, pmaxs.z - pmins.z) * 0.5
-	else
-		self.PhysRadius = self.Radius
-	end
+	self.PhysRadius = RF.MineRadius
 end
 
 function ENT:ReadCommand(cmd)
@@ -68,7 +61,17 @@ function ENT:ReadCommand(cmd)
 	if bit.band(pressed, IN_ATTACK) ~= 0 then self:ToggleAttack() end
 	if bit.band(pressed, IN_DUCK) ~= 0 then self:TryBurrow() end
 
+	if cmd:GetImpulse() == 100 then self:ToggleLamp() end
+
 	self.LastButtons = buttons
+end
+
+function ENT:ToggleLamp()
+	if CurTime() < (self.NextLamp or 0) then return end
+
+	self.NextLamp = CurTime() + 0.25
+	self:SetLamp(not self:GetLamp())
+	self:EmitSound("items/flashlight1.wav", 60, 100)
 end
 
 function ENT:GetWishDirection()
@@ -98,20 +101,22 @@ function ENT:SurfaceTrace()
 end
 
 function ENT:UpdateGround()
-	local r = self.PhysRadius
-	local width = r * 0.6
 	local pos = self:GetPos()
+	local lift = 2
+	local slack = RF.Get("GroundSlack")
 
-	local tr = util.TraceHull({
-		start = pos,
-		endpos = pos - Vector(0, 0, r - width + 4),
-		mins = Vector(-width, -width, -width),
-		maxs = Vector(width, width, width),
+	local tr = util.TraceEntity({
+		start = pos + Vector(0, 0, lift),
+		endpos = pos - Vector(0, 0, slack),
 		filter = { self, self:GetDriver() },
 		mask = MASK_SOLID
-	})
+	}, self)
 
-	self.Grounded = tr.Hit and tr.HitNormal.z > 0.5
+	self.Grounded = tr.Hit and not tr.StartSolid and tr.HitNormal.z > 0.5
+	self.GroundGap = self.Grounded and (tr.Fraction * (lift + slack) - lift) or 9999
+
+	self:SetNWBool("rf_grounded", self.Grounded)
+	self:SetNWFloat("rf_gap", self.GroundGap)
 end
 
 function ENT:SetAttack(on)
@@ -150,8 +155,12 @@ function ENT:TryJump()
 	local phys = self:GetPhysicsObject()
 	if not IsValid(phys) then return end
 
+	local mode = RF.GetMoveMode()
+
 	self.NextJump = CurTime() + RF.Get("JumpCooldown")
-	phys:ApplyForceCenter(Vector(0, 0, RF.Get("JumpForce")))
+
+	if mode then mode.Jump(self, phys) end
+
 	self:EmitSound("npc/roller/mine/rmine_tossed1.wav", 70, 100)
 end
 
@@ -221,23 +230,21 @@ function ENT:Unburrow()
 end
 
 function ENT:DriveRoll()
-	local wish = self:GetWishDirection()
-	if wish:IsZero() then return end
-
 	local phys = self:GetPhysicsObject()
 	if not IsValid(phys) then return end
 
-	local sprinting = self.Sprinting and not self:GetExhausted()
-	local cap = sprinting and RF.Get("SprintRotCap") or RF.Get("RotCap")
-	local av = phys:GetAngleVelocity()
+	local mode = RF.GetMoveMode()
+	if not mode then return end
 
-	if math.abs(av.x) + math.abs(av.y) + math.abs(av.z) > cap then return end
+	local wish = self:GetWishDirection()
+	local moving = not wish:IsZero()
 
-	local power = sprinting and RF.Get("SprintPower") or RF.Get("RollPower")
-	local center = self:LocalToWorld(phys:GetMassCenter())
-
-	phys:ApplyForceOffset(wish * power, center + Vector(0, 0, 1))
-	phys:ApplyForceOffset(wish * -power, center - Vector(0, 0, 1))
+	if moving then
+		mode.Drive(self, phys, wish)
+		RF.ApplyTraction(self, phys, wish)
+	else
+		RF.ApplyBrake(self, phys)
+	end
 end
 
 function ENT:UpdateDashAttack()
@@ -288,6 +295,7 @@ function ENT:Think()
 	if not IsValid(driver) then return true end
 
 	driver:SetPos(self:GetPos())
+	if RF.EnforceDetached then RF.EnforceDetached(driver) end
 
 	if not self:GetBuried() and not self.Detonating then
 		self:UpdateGround()
@@ -313,15 +321,24 @@ end
 function ENT:CanHit(other)
 	if not self:GetAttackMode() then return false end
 	if self:GetBuried() then return false end
-	if not IsValid(other) or other:GetClass() ~= "rf_mine" then return false end
-	if other:GetBuried() then return false end
+	if not IsValid(other) then return false end
 
-	if RF.Get("FriendlyFire") < 1 then
-		local ours, theirs = self:GetMineTeam(), other:GetMineTeam()
-		if ours == theirs and ours ~= TEAM_FREE then return false end
+	if other:GetClass() == "rf_mine" then
+		if other:GetBuried() then return false end
+
+		if RF.Get("FriendlyFire") < 1 then
+			local ours, theirs = self:GetMineTeam(), other:GetMineTeam()
+			if ours == theirs and ours ~= TEAM_FREE then return false end
+		end
+
+		return true
 	end
 
-	return true
+	if RF.Get("HitNPCs") >= 1 and (other:IsNPC() or other:IsNextBot()) then
+		return other:Health() > 0
+	end
+
+	return false
 end
 
 function ENT:HitMine(other, pos)
@@ -355,8 +372,8 @@ function ENT:HitMine(other, pos)
 	shock:SetStart(self:GetPos())
 	shock:SetOrigin(other:GetPos())
 	shock:SetScale(RF.Get("ShockSize"))
-	shock:SetMagnitude(RF.Get("ShockLength"))
-	shock:SetRadius(RF.Get("ShockArcs"))
+	shock:SetMagnitude(RF.Get("ShockBranchLength"))
+	shock:SetRadius(RF.Get("ShockBranchCount"))
 	util.Effect("rf_shock", shock)
 
 	local spark = EffectData()

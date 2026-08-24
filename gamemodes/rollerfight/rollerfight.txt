@@ -16,5 +16,32 @@
 			"type"		"Numeric"
 			"default"	"10"
 		}
+
+		2
+		{
+			"name"		"rf_discord"
+			"text"		"Discord Rich Presence"
+			"help"		"Show RollerFight on your Discord profile, needs a RPC binary module in lua/bin"
+			"type"		"CheckBox"
+			"default"	"1"
+		}
+
+		3
+		{
+			"name"		"rf_musicvolume"
+			"text"		"Music Volume"
+			"help"		"Scales on top of the game's own music slider, 0 disables music"
+			"type"		"Numeric"
+			"default"	"0.8"
+		}
+
+		4
+		{
+			"name"		"rf_movemode"
+			"text"		"Movement Mode"
+			"help"		"0 is the physics rollermine, 1 is the arcade handling"
+			"type"		"Numeric"
+			"default"	"0"
+		}
 	}
 }

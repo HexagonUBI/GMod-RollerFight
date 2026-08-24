@@ -46,4 +46,22 @@ function GM:HUDPaint()
 	end
 
 	draw.SimpleText(state, "RFHudSmall", x, y - 26, col, 0, 0)
+
+	if RF.Get("Debug") < 1 then return end
+
+	local speed = mine:GetVelocity():Length()
+	local gap = mine:GetNWFloat("rf_gap", -1)
+	local grounded = mine:GetNWBool("rf_grounded", false)
+
+	local lines = {
+		"grounded  " .. tostring(grounded),
+		"gap       " .. (gap >= 9000 and "none" or string.format("%.2f", gap)),
+		"speed     " .. string.format("%.0f", speed),
+		"mode      " .. (RF.Get("MoveMode") >= 1 and "arcade" or "physics")
+	}
+
+	for i, line in ipairs(lines) do
+		draw.SimpleText(line, "RFHudSmall", x, y - 60 - (#lines - i) * 18,
+			grounded and Color(120, 240, 140) or Color(255, 170, 120), 0, 0)
+	end
 end

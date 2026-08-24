@@ -1,14 +1,22 @@
 local BeamMaterial = Material("sprites/laserbeam")
 local FlashMaterial = Material("sprites/light_glow02_add")
 
-EFFECT.Life = 0.3
+EFFECT.Life = 0.26
+
+local function Perpendicular(dir)
+	local guide = math.abs(dir.z) > 0.9 and Vector(1, 0, 0) or Vector(0, 0, 1)
+	local right = dir:Cross(guide):GetNormalized()
+
+	return right, dir:Cross(right):GetNormalized()
+end
 
 function EFFECT:Init(data)
 	self.Origin = data:GetOrigin()
 	self.StartPos = data:GetStart()
 	self.Source = data:GetEntity()
 	self.Width = math.max(2, data:GetScale())
-	self.Reach = math.max(0, data:GetMagnitude())
+	self.BranchReach = math.max(0, data:GetMagnitude())
+	self.BranchCount = math.floor(data:GetRadius())
 	self.Born = CurTime()
 	self.Color = Color(140, 200, 255)
 
@@ -16,18 +24,8 @@ function EFFECT:Init(data)
 		self.Color = self.Source:GetTeamColor()
 	end
 
-	self.Arcs = {}
-
-	for i = 1, math.floor(data:GetRadius()) do
-		local dir = VectorRand()
-		dir.z = math.abs(dir.z) * 0.6 + 0.15
-		dir:Normalize()
-
-		self.Arcs[i] = { dir = dir, scale = math.Rand(0.55, 1) }
-	end
-
 	local mins, maxs = OrderVectors(self.StartPos, self.Origin)
-	local pad = Vector(1, 1, 1) * (self.Reach + 64)
+	local pad = Vector(1, 1, 1) * (self.BranchReach + 64)
 
 	self:SetRenderBoundsWS(mins - pad, maxs + pad)
 end
@@ -36,46 +34,77 @@ function EFFECT:Think()
 	return CurTime() < self.Born + self.Life
 end
 
-function EFFECT:Bolt(from, to, width, alpha, segments, jitter)
-	local col = self.Color
-	local dir = to - from
-	local prev = from
+function EFFECT:BuildPath(from, to, jitter, segments, anchored)
+	local delta = to - from
+	local right, up = Perpendicular(delta:GetNormalized())
+	local points = { from }
 
-	for i = 1, segments do
-		local point = from + dir * (i / segments)
+	for i = 1, segments - 1 do
+		local t = i / segments
+		local amp = anchored and jitter * math.sin(t * math.pi) or jitter * t
 
-		if i < segments then
-			point = point + VectorRand() * jitter
+		points[#points + 1] = from + delta * t
+			+ right * math.Rand(-amp, amp)
+			+ up * math.Rand(-amp, amp)
+	end
+
+	points[#points + 1] = to
+
+	return points
+end
+
+function EFFECT:DrawRibbon(points, width, color)
+	local length = 0
+
+	for i = 1, #points - 1 do
+		length = length + (points[i + 1] - points[i]):Length()
+	end
+
+	if length <= 0 then return end
+
+	render.StartBeam(#points)
+
+	local travelled = 0
+
+	for i = 1, #points do
+		if i > 1 then
+			travelled = travelled + (points[i] - points[i - 1]):Length()
 		end
 
-		render.DrawBeam(prev, point, width, 0, 1, Color(col.r, col.g, col.b, alpha))
-		render.DrawBeam(prev, point, width * 0.3, 0, 1, Color(255, 255, 255, alpha))
-
-		prev = point
+		render.AddBeam(points[i], width, travelled / length, color)
 	end
+
+	render.EndBeam()
 end
 
 function EFFECT:Render()
 	local frac = 1 - math.Clamp((CurTime() - self.Born) / self.Life, 0, 1)
 	if frac <= 0 then return end
 
-	local alpha = 255 * frac
 	local col = self.Color
+	local alpha = 255 * frac
+	local shade = Color(col.r, col.g, col.b, alpha)
+	local span = (self.Origin - self.StartPos):Length()
 
 	render.SetMaterial(BeamMaterial)
 
-	local link = self.Origin - self.StartPos
-	self:Bolt(self.StartPos, self.Origin, self.Width * frac, alpha, 10, math.Clamp(link:Length() * 0.12, 3, 26))
+	local main = self:BuildPath(self.StartPos, self.Origin, math.Clamp(span * 0.07, 2, 14), 12, true)
+	self:DrawRibbon(main, self.Width * frac, shade)
 
-	for _, arc in ipairs(self.Arcs) do
-		local reach = self.Reach * arc.scale * frac
-		local tip = self.Origin + arc.dir * reach
+	for i = 1, self.BranchCount do
+		local index = math.random(2, math.max(2, #main - 1))
+		local node = main[index]
+		local along = (main[math.min(index + 1, #main)] - main[math.max(index - 1, 1)]):GetNormalized()
+		local right, up = Perpendicular(along)
+		local dir = (right * math.Rand(-1, 1) + up * math.Rand(-1, 1) + along * math.Rand(0.2, 0.8)):GetNormalized()
+		local reach = self.BranchReach * math.Rand(0.5, 1)
 
-		self:Bolt(self.Origin, tip, self.Width * 0.55 * frac, alpha * 0.85, 9, reach * 0.16)
+		self:DrawRibbon(self:BuildPath(node, node + dir * reach, reach * 0.18, 5, false), self.Width * 0.4 * frac, shade)
 	end
 
-	local flash = self.Width * 6 * frac
+	local flash = self.Width * 4 * frac
 
 	render.SetMaterial(FlashMaterial)
-	render.DrawSprite(self.Origin, flash, flash, Color(col.r, col.g, col.b, alpha))
+	render.DrawSprite(self.Origin, flash, flash, shade)
+	render.DrawSprite(self.StartPos, flash * 0.6, flash * 0.6, Color(col.r, col.g, col.b, alpha * 0.8))
 end

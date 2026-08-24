@@ -8,8 +8,6 @@ GAMEMODE = os.path.join(ROOT, "gamemodes", "rollerfight")
 SOURCE = os.path.join(ROOT, "dev-notes")
 
 LOGO_HEIGHT = 128
-ICON_SIZE = (24, 32)
-ICON_CROP_WIDTH = 133
 
 
 def build_backgrounds():
@@ -34,36 +32,16 @@ def build_logo(image):
     print("logo.png -> %dx%d" % (scaled_width, LOGO_HEIGHT))
 
 
-def build_icon(image):
-    box = image.split()[3].getbbox()
-    if box is None:
-        box = (0, 0) + image.size
-
-    left, top, right, bottom = box
-    glyph = image.crop((left, top, min(left + ICON_CROP_WIDTH, right), bottom))
-
-    width, height = glyph.size
-    scale = min(ICON_SIZE[0] / float(width), ICON_SIZE[1] / float(height))
-    size = (max(1, int(width * scale)), max(1, int(height * scale)))
-    resized = glyph.resize(size, Image.LANCZOS)
-
-    icon = Image.new("RGBA", ICON_SIZE, (0, 0, 0, 0))
-    icon.paste(resized, ((ICON_SIZE[0] - size[0]) // 2, (ICON_SIZE[1] - size[1]) // 2), resized)
-    icon.save(os.path.join(GAMEMODE, "icon24.png"), optimize=True)
-    print("icon24.png -> %dx%d" % ICON_SIZE)
-
-
 def main():
     build_backgrounds()
 
-    logo = os.path.join(SOURCE, "logo-v1.png")
-    if not os.path.isfile(logo):
+    logo = os.path.join(SOURCE, "logo-v2.png")
+    if os.path.isfile(logo):
+        build_logo(Image.open(logo).convert("RGBA"))
+    else:
         print("no logo at %s" % logo)
-        return
 
-    image = Image.open(logo).convert("RGBA")
-    build_logo(image)
-    build_icon(image)
+    print("icon24.png left untouched on purpose")
 
 
 if __name__ == "__main__":

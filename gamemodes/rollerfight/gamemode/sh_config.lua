@@ -6,6 +6,48 @@ RF.BodyTexture = "models/roller/rollermine_sheet"
 RF.BodyNormal = "models/roller/rollermine_normal"
 RF.GlowTexture = "models/roller/rollermine_glow"
 RF.DeathColor = Color(255, 55, 45)
+RF.MineRadius = 12.56
+
+RF.DiscordAppID = "1541518230764658788"
+
+RF.DiscordTeamIcon = {
+	[1] = "rf_combine",
+	[2] = "rf_rebel",
+	[3] = "rf_free"
+}
+
+RF.MusicBedVolume = 0.75
+RF.MusicDuck = 0.25
+RF.MusicDuckTime = 4
+RF.MusicStingGap = 6
+
+RF.MusicBeds = {
+	waiting = {
+		"music/hl2_song2.mp3",
+		"music/hl2_song3.mp3",
+		"music/hl2_song4.mp3",
+		"music/hl2_song26_trainstation1.mp3"
+	},
+	combat = {
+		"music/hl2_song15.mp3",
+		"music/hl2_song14.mp3",
+		"music/hl2_song12_long.mp3",
+		"music/hl2_song17.mp3",
+		"music/hl2_song31.mp3"
+	},
+	danger = {
+		"music/hl2_song20_submix0.mp3",
+		"music/hl2_song20_submix4.mp3",
+		"music/hl2_song29.mp3",
+		"music/ravenholm_1.mp3"
+	}
+}
+
+RF.MusicStings = {
+	spawn = "music/stingers/hl1_stinger_song7.mp3",
+	kill = "music/stingers/hl1_stinger_song8.mp3",
+	death = "music/stingers/hl1_stinger_song16.mp3"
+}
 
 RF.BodyBias = Vector(0.49, 0.93, 1.00)
 RF.GlowBias = Vector(0.45, 0.95, 1.00)
@@ -27,6 +69,19 @@ RF.VarList = {
 	{ key = "JumpCooldown", group = "Physics", label = "Jump Cooldown", default = 0.03, min = 0, max = 5 },
 	{ key = "DashForce", group = "Physics", label = "Dash Force", default = 55000, min = 0, max = 250000 },
 	{ key = "DashCooldown", group = "Physics", label = "Dash Cooldown", default = 1.4, min = 0, max = 10 },
+	{ key = "Traction", group = "Physics", label = "Traction On Slippery Ground", default = 3, min = 0, max = 30 },
+	{ key = "TractionSlip", group = "Physics", label = "Slip Before Traction Helps", default = 25, min = 1, max = 400 },
+	{ key = "GroundSlack", group = "Physics", label = "Ground Contact Slack", default = 2, min = 0.5, max = 16 },
+	{ key = "Debug", group = "Physics", label = "Show Debug Readout", default = 0, min = 0, max = 1, realm = "client" },
+	{ key = "GroundBrake", group = "Physics", label = "Ground Brake When Idle", default = 0, min = 0, max = 8 },
+
+	{ key = "MoveMode", group = "Arcade", label = "Move Mode (0 physics, 1 arcade)", default = 0, min = 0, max = 1 },
+	{ key = "ArcadeSpeed", group = "Arcade", label = "Arcade Top Speed", default = 430, min = 50, max = 2000 },
+	{ key = "ArcadeSprintSpeed", group = "Arcade", label = "Arcade Sprint Speed", default = 720, min = 50, max = 3000 },
+	{ key = "ArcadeAccel", group = "Arcade", label = "Arcade Ground Accel", default = 2600, min = 100, max = 20000 },
+	{ key = "ArcadeAirAccel", group = "Arcade", label = "Arcade Air Control", default = 900, min = 0, max = 20000 },
+	{ key = "ArcadeJumpSpeed", group = "Arcade", label = "Arcade Jump Speed", default = 300, min = 0, max = 1200 },
+	{ key = "ArcadeSpin", group = "Arcade", label = "Arcade Visual Spin", default = 5000, min = 0, max = 40000 },
 
 	{ key = "MineHealth", group = "Combat", label = "Mine Health", default = 100, min = 1, max = 500, respawn = true },
 	{ key = "HitDamage", group = "Combat", label = "Contact Damage", default = 15, min = 0, max = 200 },
@@ -39,9 +94,10 @@ RF.VarList = {
 	{ key = "WaterKillLevel", group = "Combat", label = "Water Kill Level", default = 1, min = 0, max = 3 },
 	{ key = "DeathJumpForce", group = "Combat", label = "Death Jump Force", default = 30000, min = 0, max = 150000 },
 	{ key = "DeathDelay", group = "Combat", label = "Death Blink Time", default = 0.7, min = 0.1, max = 5 },
-	{ key = "ShockSize", group = "Combat", label = "Shock Beam Width", default = 14, min = 1, max = 60 },
-	{ key = "ShockLength", group = "Combat", label = "Shock Arc Reach", default = 260, min = 0, max = 1200 },
-	{ key = "ShockArcs", group = "Combat", label = "Shock Arc Count", default = 6, min = 0, max = 20 },
+	{ key = "ShockSize", group = "Combat", label = "Shock Beam Width", default = 18, min = 1, max = 60 },
+	{ key = "ShockBranchLength", group = "Combat", label = "Shock Branch Length", default = 55, min = 0, max = 400 },
+	{ key = "ShockBranchCount", group = "Combat", label = "Shock Branch Count", default = 0, min = 0, max = 12 },
+	{ key = "HitNPCs", group = "Combat", label = "Damage NPCs", default = 1, min = 0, max = 1 },
 	{ key = "SpeedDamageRef", group = "Combat", label = "Speed For Full Bonus", default = 700, min = 50, max = 3000 },
 	{ key = "SpeedDamageBonus", group = "Combat", label = "Max Speed Damage Bonus", default = 0.5, min = 0, max = 3 },
 
@@ -66,6 +122,12 @@ RF.VarList = {
 
 	{ key = "TeamTint", group = "Look", label = "Team Color Strength", default = 1.2, min = 0.2, max = 4, realm = "client" },
 	{ key = "GlowSize", group = "Look", label = "Glow Sprite Size", default = 34, min = 0, max = 120, realm = "client" },
+	{ key = "LampSize", group = "Look", label = "Lamp Radius", default = 420, min = 50, max = 1500, realm = "client" },
+	{ key = "LampBrightness", group = "Look", label = "Lamp Brightness", default = 3, min = 0.2, max = 12, realm = "client" },
+
+	{ key = "MusicVolume", group = "Audio", label = "Music Volume (x game music slider)", default = 0.8, min = 0, max = 1, realm = "client" },
+	{ key = "MusicDangerAt", group = "Audio", label = "Danger Music Below Health", default = 0.35, min = 0, max = 1, realm = "client" },
+	{ key = "Discord", group = "Audio", label = "Discord Rich Presence", default = 1, min = 0, max = 1, realm = "client" },
 
 	{ key = "CompatStrip", group = "Compat", label = "Remove Conflicting Addon Hooks", default = 1, min = 0, max = 1 }
 }
