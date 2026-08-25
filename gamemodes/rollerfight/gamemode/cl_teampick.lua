@@ -101,17 +101,8 @@ function Pick.Open()
 	Panel:SetScreenLock(true)
 	Panel:MakePopup()
 	Panel:SetKeyboardInputEnabled(false)
-	Panel:SetPopupStayAtBack(true)
 
-	Panel.Think = function(self)
-		local paused = gui.IsGameUIVisible()
-
-		if self.Paused ~= paused then
-			self.Paused = paused
-			self:SetMouseInputEnabled(not paused)
-			self:SetKeyboardInputEnabled(false)
-		end
-	end
+	Panel.Think = RF.PanelPause
 
 	Panel.Paint = function(self, pw, ph)
 		RF.Box(0, 0, pw, ph, U.BG)

@@ -30,6 +30,14 @@ RF.GroundSamples = {
 	{ offset = Vector(0, -ring, 0), depth = ringDepth }
 }
 
+RF.MapPatterns = {
+	"^gm_",
+	"^gmt_",
+	"^ph_",
+	"^dm_",
+	"^phys_"
+}
+
 RF.SpawnClasses = {
 	"info_player_start",
 	"info_player_deathmatch",
@@ -185,6 +193,10 @@ RF.VarList = {
 	{ key = "CountdownTime", group = "Round", label = "Countdown Length", default = 3, min = 1, max = 10 },
 	{ key = "TeamPickTime", group = "Round", label = "Team Pick Length", default = 20, min = 5, max = 120 },
 	{ key = "PostTime", group = "Round", label = "Stats Screen Length", default = 12, min = 3, max = 60 },
+	{ key = "RoundsPerMatch", group = "Round", label = "Rounds Per Match", default = 5, min = 1, max = 20 },
+	{ key = "MapVote", group = "Round", label = "Map Vote After Match", default = 1, min = 0, max = 1 },
+	{ key = "MapVoteTime", group = "Round", label = "Map Vote Length", default = 25, min = 5, max = 120 },
+	{ key = "MapVoteChoices", group = "Round", label = "Most Maps On The Vote", default = 32, min = 2, max = 64 },
 
 	{ key = "CameraDistance", group = "Camera", label = "Camera Distance", default = 95, min = 40, max = 400, realm = "client" },
 	{ key = "CameraHeight", group = "Camera", label = "Camera Height", default = 22, min = -50, max = 150, realm = "client" },

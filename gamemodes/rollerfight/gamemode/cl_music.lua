@@ -235,6 +235,7 @@ function Music.MoodFor()
 
 	if state == RF.STATE_WAITING and not RF.IsTraining(ply) then return "lobby" end
 	if state == RF.STATE_TEAMPICK then return "lobby" end
+	if state == RF.STATE_MAPVOTE then return "lobby" end
 	if state == RF.STATE_POST then return "lobby" end
 
 	local mine = ply:GetNWEntity("rf_mine")

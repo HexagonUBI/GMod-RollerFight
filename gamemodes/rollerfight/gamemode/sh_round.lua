@@ -4,10 +4,12 @@ RF.STATE_COUNTDOWN = 2
 RF.STATE_ACTIVE = 3
 RF.STATE_POST = 4
 RF.STATE_TEAMPICK = 5
+RF.STATE_MAPVOTE = 6
 
 RF.StateNames = {
 	[RF.STATE_WAITING] = "Waiting For Players",
 	[RF.STATE_TEAMPICK] = "Choosing Teams",
+	[RF.STATE_MAPVOTE] = "Map Vote",
 	[RF.STATE_INTERMISSION] = "Starting",
 	[RF.STATE_COUNTDOWN] = "Get Ready",
 	[RF.STATE_ACTIVE] = "Round In Progress",
@@ -82,6 +84,26 @@ end
 
 function RF.IsTraining(ply)
 	return IsValid(ply) and ply:GetNWBool("rf_training", false)
+end
+
+function RF.RoundsPerMatch()
+	return math.max(1, math.floor(RF.Get("RoundsPerMatch")))
+end
+
+function RF.RoundNumber()
+	return math.max(1, GetGlobalInt("rf_round", 1))
+end
+
+function RF.LastRound()
+	return GetGlobalBool("rf_lastround", false)
+end
+
+function RF.IsDown(ply)
+	if not IsValid(ply) then return false end
+	if not RF.InRound() then return false end
+	if ply:GetNWBool("rf_spectating", false) then return false end
+
+	return not IsValid(ply:GetNWEntity("rf_mine"))
 end
 
 function RF.IsReady(ply)

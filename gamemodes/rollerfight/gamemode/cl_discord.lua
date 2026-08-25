@@ -100,6 +100,9 @@ function Discord.BuildPresence()
 	elseif round == RF.STATE_TEAMPICK then
 		details = "Choosing Teams"
 		state = gt.name
+	elseif round == RF.STATE_MAPVOTE then
+		details = "Map Vote"
+		state = game.GetMap()
 	elseif round == RF.STATE_POST then
 		details = "Round Over"
 		state = string.format("%d kills, %d deaths", ply:Frags(), ply:Deaths())

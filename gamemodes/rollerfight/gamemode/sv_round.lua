@@ -8,6 +8,7 @@ util.AddNetworkString("rf_spectate")
 util.AddNetworkString("rf_anchors")
 
 RF.Anchors = {}
+RF.MatchEnded = false
 
 local function AnchorAt(sample)
 	if util.PointContents(sample) ~= CONTENTS_EMPTY then return end
@@ -118,6 +119,7 @@ function RF.SetSpectate(ply, state)
 	RF.DetachPlayer(ply)
 
 	if RF.InRound() and RF.GetGameType().lives <= 0 then
+		RF.EnsureTeam(ply)
 		RF.GiveMine(ply, RF.SelectSpawnPos(ply))
 	end
 end
@@ -167,6 +169,10 @@ function RF.EnterWaiting()
 	RF.SetState(RF.STATE_WAITING)
 	RF.ClearReady()
 
+	RF.MatchEnded = false
+	SetGlobalInt("rf_round", 1)
+	SetGlobalBool("rf_lastround", false)
+
 	for _, ply in ipairs(player.GetAll()) do
 		ply:SetNWBool("rf_training", false)
 		ply:SetFrags(0)
@@ -197,11 +203,15 @@ end
 
 function RF.FinishTeamPick()
 	for _, ply in ipairs(player.GetAll()) do
-		if ply:Team() ~= TEAM_COMBINE and ply:Team() ~= TEAM_REBEL then RF.AssignTeam(ply) end
+		RF.EnsureTeam(ply)
 	end
 end
 
 function RF.StartMatch()
+	RF.MatchEnded = false
+	SetGlobalInt("rf_round", 1)
+	SetGlobalBool("rf_lastround", false)
+
 	if RF.GetGameType().teams then
 		RF.EnterTeamPick()
 		return
@@ -230,13 +240,18 @@ function RF.EnterCountdown()
 	net.Start("rf_feedclear")
 	net.Broadcast()
 
+	local first = RF.RoundNumber() <= 1
+
 	for _, ply in ipairs(player.GetAll()) do
-		ply:SetFrags(0)
-		ply:SetDeaths(0)
+		if first then
+			ply:SetFrags(0)
+			ply:SetDeaths(0)
+		end
+
 		ply:SetNWInt("rf_lives", gt.lives)
 
 		if gt.teams then
-			if ply:Team() ~= TEAM_COMBINE and ply:Team() ~= TEAM_REBEL then RF.AssignTeam(ply) end
+			RF.EnsureTeam(ply)
 		else
 			ply:SetTeam(TEAM_FREE)
 		end
@@ -258,6 +273,7 @@ function RF.EnterActive()
 end
 
 function RF.EnterPost(reason)
+	SetGlobalBool("rf_lastround", RF.MatchEnded or RF.RoundNumber() >= RF.RoundsPerMatch())
 	RF.SetState(RF.STATE_POST, RF.Get("PostTime"))
 
 	for _, ply in ipairs(player.GetAll()) do
@@ -274,6 +290,13 @@ function RF.EnterPost(reason)
 	net.Start("rf_roundend")
 	net.WriteString(reason or "")
 	net.Broadcast()
+end
+
+function RF.EnsureTeam(ply)
+	if not RF.GetGameType().teams then return end
+	if ply:Team() == TEAM_COMBINE or ply:Team() == TEAM_REBEL then return end
+
+	RF.AssignTeam(ply)
 end
 
 function RF.AssignTeam(ply)
@@ -327,7 +350,9 @@ function RF.CheckWin()
 	if limit > 0 and not gt.teams then
 		for _, ply in ipairs(player.GetAll()) do
 			if ply:Frags() >= limit then
+				RF.MatchEnded = true
 				RF.EnterPost(ply:Nick() .. " reached the score limit")
+
 				return
 			end
 		end
@@ -352,6 +377,12 @@ local function Tick()
 	if GetGlobalBool("rf_paused", false) then return end
 
 	local state = RF.GetState()
+
+	if state ~= RF.STATE_WAITING and #player.GetAll() == 0 then
+		RF.EnterWaiting()
+
+		return
+	end
 
 	if state == RF.STATE_WAITING then
 		local ok = RF.CanStart()
@@ -400,7 +431,18 @@ local function Tick()
 	if state == RF.STATE_INTERMISSION then RF.EnterCountdown() return end
 	if state == RF.STATE_COUNTDOWN then RF.EnterActive() return end
 	if state == RF.STATE_ACTIVE then RF.EnterPost("Time up") return end
-	if state == RF.STATE_POST then RF.EnterWaiting() return end
+	if state == RF.STATE_MAPVOTE then RF.FinishMapVote() return end
+
+	if state == RF.STATE_POST then
+		if RF.LastRound() then
+			RF.EnterMapVote()
+		else
+			SetGlobalInt("rf_round", RF.RoundNumber() + 1)
+			RF.EnterIntermission()
+		end
+
+		return
+	end
 end
 
 timer.Create("RF.RoundTick", 0.25, 0, function()

@@ -134,6 +134,7 @@ function RF.GiveMine(ply, pos)
 
 	ply.RFMine = mine
 	ply:SetNWEntity("rf_mine", mine)
+	ply:SetNWFloat("rf_respawn", 0)
 	RF.RideMine(ply, mine)
 
 	return mine
@@ -185,6 +186,7 @@ function RF.OnMineDestroyed(mine, attacker, cause, assist)
 
 	if RF.GetGameType().lives > 0 then
 		ply:SetNWInt("rf_lives", math.max(0, lives - 1))
+		ply:SetNWFloat("rf_respawn", 0)
 		timer.Simple(0.2, RF.CheckWin)
 
 		return
@@ -192,6 +194,8 @@ function RF.OnMineDestroyed(mine, attacker, cause, assist)
 
 	local delay = RF.Get("RespawnTime")
 	if delay <= 0 then delay = 0.1 end
+
+	ply:SetNWFloat("rf_respawn", CurTime() + delay)
 
 	timer.Simple(delay, function()
 		if not IsValid(ply) or not ply:Alive() then return end
@@ -228,6 +232,7 @@ function GM:PlayerSpawn(ply, transition)
 	RF.DetachPlayer(ply)
 
 	if RF.InRound() and RF.GetGameType().lives <= 0 then
+		RF.EnsureTeam(ply)
 		RF.GiveMine(ply, RF.SelectSpawnPos(ply))
 	end
 end

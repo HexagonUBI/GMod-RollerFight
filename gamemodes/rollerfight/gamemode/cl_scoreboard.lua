@@ -26,12 +26,19 @@ local function Sorted()
 	local list = player.GetAll()
 
 	table.sort(list, function(a, b)
+		local downA, downB = RF.IsDown(a), RF.IsDown(b)
+
+		if downA ~= downB then return downB end
 		if a:Frags() == b:Frags() then return a:Deaths() < b:Deaths() end
 
 		return a:Frags() > b:Frags()
 	end)
 
 	return list
+end
+
+local function Sink(col, fade)
+	return Color(col.r * fade, col.g * fade, col.b * fade, col.a or 255)
 end
 
 local function StyleTab(btn)
@@ -116,20 +123,32 @@ local function Column(parent, teamID, wide)
 			avatar:SetPlayer(ply, 64)
 			avatar:SetMouseInputEnabled(false)
 
+			row.PaintOver = function(self, w, h)
+				if not RF.IsDown(ply) then return end
+
+				surface.SetDrawColor(16, 16, 16, 170)
+				surface.DrawRect(teamID and 10 or 38, 7, 32, 32)
+			end
+
 			row.Paint = function(self, w, h)
+				local down = RF.IsDown(ply)
+				local fade = down and 0.42 or 1
+				local main = down and Color(126, 126, 126) or COL_TEXT
+				local sub = down and Color(96, 96, 96) or COL_DIM
+
 				Box(0, 0, w, h, self:IsHovered() and Color(54, 54, 54) or (index % 2 == 0 and COL_ROWALT or COL_ROW))
-				Box(0, 0, 4, h, RF.PlayerColor(ply))
-				Outline(teamID and 8 or 36, 5, 36, 36, Color(90, 90, 90))
+				Box(0, 0, 4, h, Sink(RF.PlayerColor(ply), fade))
+				Outline(teamID and 8 or 36, 5, 36, 36, Color(90 * fade, 90 * fade, 90 * fade))
 
 				if ply == LocalPlayer() then Outline(0, 0, w, h, COL_ACCENT) end
 
 				local textX = teamID and 52 or 80
 
 				if not teamID then
-					draw.SimpleText(index, "RFHead", 20, h * 0.5, COL_DIM, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+					draw.SimpleText(index, "RFHead", 20, h * 0.5, sub, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 				end
 
-				draw.SimpleText(ply:Nick(), "RFBody", textX, h * 0.5 - 8, COL_TEXT, 0, TEXT_ALIGN_CENTER)
+				draw.SimpleText(ply:Nick(), "RFBody", textX, h * 0.5 - 8, main, 0, TEXT_ALIGN_CENTER)
 
 				local gt = RF.GetGameType()
 				local note = ply:Ping() .. " ms"
@@ -142,13 +161,14 @@ local function Column(parent, teamID, wide)
 					note = "respawning"
 				end
 
-				draw.SimpleText(note, "RFSmall", textX, h * 0.5 + 10, COL_DIM, 0, TEXT_ALIGN_CENTER)
+				draw.SimpleText(note, "RFSmall", textX, h * 0.5 + 10,
+					down and Color(210, 120, 90) or COL_DIM, 0, TEXT_ALIGN_CENTER)
 
 				local kills, deaths = ply:Frags(), ply:Deaths()
 
 				if teamID then
 					draw.SimpleText(kills .. "   " .. deaths, "RFHead", w - 14, h * 0.5,
-						COL_TEXT, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+						main, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
 
 					return
 				end
@@ -156,11 +176,12 @@ local function Column(parent, teamID, wide)
 				local ratio = deaths > 0 and string.format("%.2f", kills / deaths) or tostring(kills)
 				local ping = ply:Ping()
 
-				draw.SimpleText(kills, "RFHead", w - 250, h * 0.5, COL_TEXT, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-				draw.SimpleText(deaths, "RFBody", w - 170, h * 0.5, COL_DIM, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-				draw.SimpleText(ratio, "RFBody", w - 95, h * 0.5, COL_TEXT, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-				draw.SimpleText(ping, "RFSmall", w - 25, h * 0.5,
-					ping < 80 and Color(90, 190, 100) or (ping < 160 and COL_ACCENT or Color(220, 90, 80)),
+				local pingCol = ping < 80 and Color(90, 190, 100) or (ping < 160 and COL_ACCENT or Color(220, 90, 80))
+
+				draw.SimpleText(kills, "RFHead", w - 250, h * 0.5, main, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+				draw.SimpleText(deaths, "RFBody", w - 170, h * 0.5, sub, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+				draw.SimpleText(ratio, "RFBody", w - 95, h * 0.5, main, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+				draw.SimpleText(ping, "RFSmall", w - 25, h * 0.5, down and Sink(pingCol, fade) or pingCol,
 					TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 			end
 		end
@@ -264,6 +285,119 @@ local function AdminButton(parent, label, action)
 	btn.DoClick = action
 
 	return btn
+end
+
+local function MatchStat(panel, y, label, value)
+	draw.SimpleText(label, "RFSmall", 12, y, COL_DIM, 0, 0)
+	draw.SimpleText(value, "RFBody", panel:GetWide() - 12, y - 1, COL_TEXT, TEXT_ALIGN_RIGHT, 0)
+end
+
+local function BuildMatch(parent)
+	local page = vgui.Create("DPanel", parent)
+	page.Paint = function(self, w, h)
+		if RF.IsAdmin(LocalPlayer()) then return end
+
+		draw.SimpleText("Host and superadmin only.", "RFHead", w * 0.5, h * 0.5, COL_DIM,
+			TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+	end
+
+	local left = page:Add("DPanel")
+	left:Dock(LEFT)
+	left:SetWide(300)
+	left:DockMargin(0, 0, 8, 0)
+	left.Paint = function() end
+	left.Think = function(self) self:SetVisible(RF.IsAdmin(LocalPlayer())) end
+
+	local status = left:Add("DPanel")
+	status:Dock(TOP)
+	status:SetTall(126)
+	status:DockMargin(0, 0, 0, 8)
+	status.Paint = function(self, w, h)
+		Box(0, 0, w, h, Color(26, 26, 26))
+		Outline(0, 0, w, h, COL_LINE)
+		Box(0, 0, 4, h, COL_ACCENT)
+
+		draw.SimpleText("MATCH", "RFHead", 12, 10, COL_ACCENT, 0, 0)
+
+		local paused = GetGlobalBool("rf_paused", false)
+		local left2 = RF.StateTimeLeft()
+
+		MatchStat(self, 36, "State", paused and "Paused" or (RF.StateNames[RF.GetState()] or ""))
+		MatchStat(self, 56, "Round", RF.RoundNumber() .. " of " .. RF.RoundsPerMatch())
+		MatchStat(self, 76, "Time left", left2 > 0 and string.format("%d:%02d", math.floor(left2 / 60), math.floor(left2 % 60)) or "none")
+		MatchStat(self, 96, "Players", tostring(#player.GetAll()))
+	end
+
+	local function Act(label, id, live)
+		local btn = AdminButton(left, label, function()
+			net.Start("rf_admin_action")
+			net.WriteString(id)
+			net.SendToServer()
+		end)
+
+		if live then btn.Think = live end
+
+		return btn
+	end
+
+	local force = AdminButton(left, "Force Start Match", function()
+		net.Start("rf_forcestart")
+		net.SendToServer()
+	end)
+
+	force.Think = function(self)
+		self:SetEnabled(RF.GetState() == RF.STATE_WAITING)
+	end
+
+	local pause = AdminButton(left, "Pause Match", function()
+		net.Start("rf_pause")
+		net.SendToServer()
+	end)
+
+	pause.Think = function(self)
+		self:SetText(GetGlobalBool("rf_paused", false) and "Resume Match" or "Pause Match")
+	end
+
+	Act("End Round Now", "endround", function(self) self:SetEnabled(RF.InRound()) end)
+	Act("End Match Now", "endmatch", function(self) self:SetEnabled(RF.InRound()) end)
+	Act("Start Map Vote", "mapvote", function(self) self:SetEnabled(RF.GetState() ~= RF.STATE_MAPVOTE) end)
+	Act("Finish Map Vote", "endvote", function(self) self:SetEnabled(RF.GetState() == RF.STATE_MAPVOTE) end)
+	Act("Back To Lobby", "lobby")
+
+	local right = page:Add("DPanel")
+	right:Dock(FILL)
+	right.Paint = function(self, w, h)
+		Box(0, 0, w, h, Color(26, 26, 26))
+		Outline(0, 0, w, h, COL_LINE)
+
+		draw.SimpleText("ROUND SETTINGS", "RFHead", 12, 10, COL_ACCENT, 0, 0)
+	end
+
+	right.Think = function(self) self:SetVisible(RF.IsAdmin(LocalPlayer())) end
+
+	local rows = right:Add("DPanel")
+	rows:Dock(FILL)
+	rows:DockMargin(6, 34, 6, 6)
+	rows.Paint = function() end
+
+	RF.SettingRow(rows, "Rounds per match", "RoundsPerMatch", 1, function(v) return tostring(math.floor(v)) end)
+	RF.SettingRow(rows, "Round length", "RoundTime", 15, function(v)
+		return string.format("%d:%02d", math.floor(v / 60), v % 60)
+	end)
+	RF.SettingRow(rows, "Score limit", "ScoreLimit", 1, function(v)
+		return v > 0 and tostring(math.floor(v)) or "off"
+	end)
+	RF.SettingRow(rows, "Stats screen", "PostTime", 1, function(v) return math.floor(v) .. "s" end)
+	RF.SettingRow(rows, "Respawn delay", "RespawnTime", 1, function(v) return math.floor(v) .. "s" end)
+	RF.SettingRow(rows, "Players needed", "MinPlayers", 1, function(v)
+		return string.format("%d of %d here", math.floor(v), #player.GetAll())
+	end)
+	RF.SettingRow(rows, "Friendly fire", "FriendlyFire", 1, function(v) return v >= 1 and "ON" or "OFF" end)
+	RF.SettingRow(rows, "Map vote", "MapVote", 1, function(v) return v >= 1 and "ON" or "OFF" end)
+	RF.SettingRow(rows, "Map vote length", "MapVoteTime", 5, function(v) return math.floor(v) .. "s" end)
+	RF.SettingRow(rows, "Maps on the vote", "MapVoteChoices", 4, function(v) return tostring(math.floor(v)) end)
+
+	return page
 end
 
 local function BuildAdmin(parent)
@@ -407,6 +541,7 @@ function Score.Open()
 	Board:SetSizable(false)
 	Board:MakePopup()
 	Board:SetKeyboardInputEnabled(false)
+	Board.Think = RF.PanelPause
 
 	Board.Paint = function(self, pw, ph)
 		Box(0, 0, pw, ph, COL_BG)
@@ -414,9 +549,20 @@ function Score.Open()
 
 		Box(0, 0, pw, 96, Color(10, 10, 10, 255))
 
-		surface.SetDrawColor(255, 255, 255, 70)
-		surface.SetMaterial(RF.Mat("rollerfight/sb_header.png"))
-		surface.DrawTexturedRect(0, 0, pw, 96)
+		local thumb = RF.MapThumb(game.GetMap())
+
+		if thumb then
+			local from = math.floor(pw * 0.58)
+
+			surface.SetDrawColor(255, 255, 255, 255)
+			RF.DrawCover(thumb, from, 0, pw - from, 96)
+			Box(from, 0, pw - from, 96, Color(6, 6, 8, 100))
+			RF.FadeX(from, 0, math.floor((pw - from) * 0.6), 96, Color(10, 10, 10, 255))
+		else
+			surface.SetDrawColor(255, 255, 255, 70)
+			surface.SetMaterial(RF.Mat("rollerfight/sb_header.png"))
+			surface.DrawTexturedRect(0, 0, pw, 96)
+		end
 
 		Box(0, 94, pw, 2, COL_ACCENT)
 
@@ -426,7 +572,13 @@ function Score.Open()
 
 		Box(288, 26, 2, 44, Color(90, 90, 90))
 
-		draw.SimpleText(RF.GetGameType().name, "RFHead", 304, 34, COL_TEXT, 0, TEXT_ALIGN_CENTER)
+		local title = RF.GetGameType().name
+
+		if RF.RoundsPerMatch() > 1 then
+			title = title .. "   Round " .. RF.RoundNumber() .. " of " .. RF.RoundsPerMatch()
+		end
+
+		draw.SimpleText(title, "RFHead", 304, 34, COL_TEXT, 0, TEXT_ALIGN_CENTER)
 		draw.SimpleText(game.GetMap(), "RFSmall", 304, 60, COL_ACCENT, 0, TEXT_ALIGN_CENTER)
 
 		local state = RF.StateNames[RF.GetState()] or ""
@@ -434,12 +586,12 @@ function Score.Open()
 
 		if GetGlobalBool("rf_paused", false) then state = "Paused" end
 
-		draw.SimpleText(string.upper(state), "RFHead", pw - 20, 22, COL_TEXT, TEXT_ALIGN_RIGHT, 0)
+		draw.SimpleText(string.upper(state), "RFHudTag", pw - 20, 24, RF.Hud.LABEL, TEXT_ALIGN_RIGHT, 0)
 
 		if left > 0 then
-			draw.SimpleText(string.format("%d:%02d", math.floor(left / 60), math.floor(left % 60)),
-				"RFHudTimer", pw - 20, 44, COL_ACCENT, TEXT_ALIGN_RIGHT, 0)
+			RF.HudClock(left, pw - 20, 42, left < 30 and RF.Hud.CAUTION or RF.Hud.FG)
 		end
+
 	end
 
 	local tabs = Board:Add("DPanel")
@@ -455,6 +607,7 @@ function Score.Open()
 
 	local pages = {
 		{ name = "SCORES", build = BuildScores },
+		{ name = "MATCH", build = BuildMatch },
 		{ name = "ADMIN", build = BuildAdmin }
 	}
 

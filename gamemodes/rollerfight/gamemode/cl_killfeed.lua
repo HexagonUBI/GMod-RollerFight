@@ -4,9 +4,6 @@ local Feed = RF.Feed
 
 Feed.Entries = {}
 
-surface.CreateFont("RFFeed", { font = "Verdana", size = 15, weight = 700, antialias = true })
-
-local ROW, ICON = 24, 20
 
 RF.CauseIcon = {
 	contact = "contact",
@@ -83,13 +80,20 @@ function GM:HUDDrawTargetID()
 	return true
 end
 
+local function Fade(col, alpha)
+	return Color(col.r, col.g, col.b, math.min(col.a or 255, alpha))
+end
+
 hook.Add("HUDPaint", "RF.Killfeed", function()
 	if RF.Get("FeedShow") < 1 then return end
 	if #Feed.Entries == 0 then return end
 
+	local Hud = RF.Hud
+	local S = Hud.Scale
+	local ROW, ICON, PAD = S(20), S(15), S(6)
 	local life = RF.Get("FeedTime")
-	local x = ScrW() - 24
-	local y = 96
+	local right = ScrW() - S(16)
+	local top = S(62)
 	local now = CurTime()
 
 	for index = #Feed.Entries, 1, -1 do
@@ -113,57 +117,40 @@ hook.Add("HUDPaint", "RF.Killfeed", function()
 		table.insert(parts, { text = entry.Victim, col = FeedColor(entry, true) })
 
 		if entry.Assist ~= "" then
-			table.insert(parts, { text = "+" .. entry.Assist, col = Color(150, 150, 150) })
+			table.insert(parts, { text = "+" .. entry.Assist, col = Hud.LABEL })
 		end
 
 		surface.SetFont("RFFeed")
 
-		local pad = 8
-		local width = 0
+		local width = PAD
 
 		for _, part in ipairs(parts) do
-			width = width + (part.icon and ICON or select(1, surface.GetTextSize(part.text))) + pad
+			width = width + (part.icon and ICON or select(1, surface.GetTextSize(part.text))) + PAD
 		end
 
-		local rowY = y + (index - 1) * (ROW + 4)
-
+		local rowY = top + (index - 1) * (ROW + S(3))
+		local rowX = right - width
 		local involved = entry.Mine or entry.Died or entry.Assisted
-		local accent = Color(238, 130, 32)
 
-		if entry.Died then
-			accent = Color(220, 70, 60)
-		elseif entry.Mine then
-			accent = Color(110, 210, 120)
-		end
+		draw.RoundedBox(S(3), rowX, rowY, width, ROW, Fade(Hud.BG, involved and 190 or 110))
 
 		if involved then
-			surface.SetDrawColor(accent.r * 0.28, accent.g * 0.28, accent.b * 0.28, math.min(235, alpha))
-		else
-			surface.SetDrawColor(12, 12, 12, math.min(200, alpha))
+			surface.SetDrawColor(Fade(entry.Died and Hud.DAMAGED or Hud.FG, alpha))
+			surface.DrawRect(rowX, rowY, S(2), ROW)
 		end
 
-		surface.DrawRect(x - width - 10, rowY, width + 14, ROW)
-
-		if involved then
-			surface.SetDrawColor(accent.r, accent.g, accent.b, math.min(255, alpha))
-			surface.DrawOutlinedRect(x - width - 10, rowY, width + 14, ROW)
-		end
-
-		surface.SetDrawColor(accent.r, accent.g, accent.b, math.min(230, alpha))
-		surface.DrawRect(x + 4, rowY, involved and 4 or 2, ROW)
-
-		local cursor = x - width - 2
+		local cursor = rowX + PAD
 
 		for _, part in ipairs(parts) do
 			if part.icon then
-				surface.SetDrawColor(255, 255, 255, alpha)
+				surface.SetDrawColor(Fade(Hud.LABEL, alpha))
 				surface.SetMaterial(icon)
 				surface.DrawTexturedRect(cursor, rowY + (ROW - ICON) * 0.5, ICON, ICON)
-				cursor = cursor + ICON + pad
+				cursor = cursor + ICON + PAD
 			else
-				draw.SimpleText(part.text, "RFFeed", cursor, rowY + ROW * 0.5,
-					Color(part.col.r, part.col.g, part.col.b, alpha), 0, TEXT_ALIGN_CENTER)
-				cursor = cursor + select(1, surface.GetTextSize(part.text)) + pad
+				draw.SimpleText(part.text, "RFFeed", cursor, rowY + ROW * 0.5, Fade(part.col, alpha),
+					TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+				cursor = cursor + select(1, surface.GetTextSize(part.text)) + PAD
 			end
 		end
 	end

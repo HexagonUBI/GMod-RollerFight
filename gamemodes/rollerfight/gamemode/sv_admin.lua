@@ -83,6 +83,41 @@ RF.AdminActions.clear = function(ply)
 	RF.Notify(ply, "Removed " .. count .. " dummies")
 end
 
+RF.AdminActions.endround = function(ply)
+	if not RF.InRound() then return end
+
+	RF.EnterPost("Round ended by " .. ply:Nick())
+	RF.Notify(ply, "Round ended")
+end
+
+RF.AdminActions.endmatch = function(ply)
+	if not RF.InRound() then return end
+
+	RF.MatchEnded = true
+	RF.EnterPost("Match ended by " .. ply:Nick())
+	RF.Notify(ply, "Match ended, map vote is next")
+end
+
+RF.AdminActions.lobby = function(ply)
+	RF.EnterWaiting()
+	RF.Notify(ply, "Back to the lobby")
+end
+
+RF.AdminActions.mapvote = function(ply)
+	if RF.GetState() == RF.STATE_MAPVOTE then return end
+
+	RF.MatchEnded = true
+	RF.EnterMapVote()
+	RF.Notify(ply, "Map vote started")
+end
+
+RF.AdminActions.endvote = function(ply)
+	if RF.GetState() ~= RF.STATE_MAPVOTE then return end
+
+	RF.Notify(ply, "Changing map")
+	RF.FinishMapVote()
+end
+
 RF.AdminActions.reset = function(ply)
 	for _, v in ipairs(RF.VarList) do
 		if v.realm ~= "client" then

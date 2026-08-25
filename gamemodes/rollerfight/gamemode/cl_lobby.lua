@@ -28,6 +28,177 @@ function RF.Mat(path)
 	return Mats[path]
 end
 
+RF.MapThumbs = {}
+RF.MapThumbWhy = {}
+RF.ThumbDir = "rollerfight/thumbs"
+
+function RF.ThumbUsable(mat)
+	if not mat then return "no material" end
+	if mat:IsError() then return "error material" end
+
+	local ok, why = pcall(function()
+		local tex = mat:GetTexture("$basetexture")
+
+		if not tex then return "no base texture" end
+
+		local name = string.lower(tex:GetName() or "")
+
+		if name == "" then return "unnamed texture" end
+		if string.find(name, "error", 1, true) then return "missing texture" end
+		if tex:Width() < 16 or tex:Height() < 16 then return "texture too small" end
+
+		return nil
+	end)
+
+	if not ok then return "check failed" end
+
+	return why
+end
+
+function RF.CacheThumb(map)
+	local out = RF.ThumbDir .. "/" .. map .. ".png"
+
+	if file.Exists(out, "DATA") then return out end
+
+	local raw = file.Read("maps/thumb/" .. map .. ".png", "GAME")
+
+	if not raw or #raw < 64 then return end
+
+	file.CreateDir("rollerfight")
+	file.CreateDir(RF.ThumbDir)
+	file.Write(out, raw)
+
+	if not file.Exists(out, "DATA") then return end
+
+	return out
+end
+
+function RF.MapThumb(map)
+	local cached = RF.MapThumbs[map]
+
+	if cached ~= nil then return cached or nil end
+
+	local tries = {}
+
+	if file.Exists("materials/maps/" .. map .. ".vmt", "GAME") then
+		table.insert(tries, "maps/" .. map)
+	end
+
+	if file.Exists("maps/thumb/" .. map .. ".png", "GAME") then
+		local copy = RF.CacheThumb(map)
+
+		if copy then table.insert(tries, "../data/" .. copy) end
+	end
+
+	local why = "no thumbnail shipped"
+
+	for _, path in ipairs(tries) do
+		local mat = Material(path, "smooth")
+		local bad = RF.ThumbUsable(mat)
+
+		if not bad then
+			RF.MapThumbs[map] = mat
+			RF.MapThumbWhy[map] = path
+
+			return mat
+		end
+
+		why = path .. " -> " .. bad
+	end
+
+	RF.MapThumbs[map] = false
+	RF.MapThumbWhy[map] = why
+
+	return nil
+end
+
+concommand.Add("rf_thumbs", function()
+	local pool, hit = {}, 0
+
+	for _, name in ipairs(file.Find("maps/*.bsp", "GAME") or {}) do
+		table.insert(pool, string.StripExtension(name))
+	end
+
+	table.sort(pool)
+
+	for _, map in ipairs(pool) do
+		if RF.MapThumb(map) then hit = hit + 1 end
+
+		MsgN(string.format("    %-34s %s", map, RF.MapThumbWhy[map] or "?"))
+	end
+
+	MsgN("[RollerFight] " .. hit .. " of " .. #pool .. " maps have a usable thumbnail")
+end)
+
+function RF.DrawCover(mat, x, y, w, h)
+	local mw, mh = mat:Width(), mat:Height()
+
+	if mw <= 0 or mh <= 0 or w <= 0 or h <= 0 then return end
+
+	local want, have = w / h, mw / mh
+	local u, v = 0, 0
+
+	if have > want then
+		u = (1 - want / have) * 0.5
+	else
+		v = (1 - have / want) * 0.5
+	end
+
+	surface.SetMaterial(mat)
+	surface.DrawTexturedRectUV(x, y, w, h, u, v, 1 - u, 1 - v)
+end
+
+function RF.FadeX(x, y, w, h, col, flip)
+	local steps = 44
+	local step = w / steps
+
+	for i = 0, steps - 1 do
+		local frac = i / (steps - 1)
+
+		if not flip then frac = 1 - frac end
+
+		surface.SetDrawColor(col.r, col.g, col.b, (col.a or 255) * frac)
+		surface.DrawRect(x + i * step, y, step + 1, h)
+	end
+end
+
+function RF.FadeY(x, y, w, h, col, flip)
+	local steps = 32
+	local step = h / steps
+
+	for i = 0, steps - 1 do
+		local frac = i / (steps - 1)
+
+		if not flip then frac = 1 - frac end
+
+		surface.SetDrawColor(col.r, col.g, col.b, (col.a or 255) * frac)
+		surface.DrawRect(x, y + i * step, w, step + 1)
+	end
+end
+
+function RF.MapPlate(map, x, y, w, h, dim)
+	local mat = RF.MapThumb(map)
+
+	if mat then
+		surface.SetDrawColor(255, 255, 255, 255)
+		RF.DrawCover(mat, x, y, w, h)
+
+		if dim then RF.Box(x, y, w, h, Color(0, 0, 0, dim)) end
+
+		return true
+	end
+
+	RF.Box(x, y, w, h, Color(26, 26, 28))
+
+	surface.SetDrawColor(RF.UI.ACCENT.r, RF.UI.ACCENT.g, RF.UI.ACCENT.b, 26)
+
+	for i = -h, w, 26 do
+		surface.DrawLine(x + i, y + h, x + i + h, y)
+	end
+
+	return false
+end
+
 function RF.Box(x, y, w, h, col)
 	surface.SetDrawColor(col)
 	surface.DrawRect(x, y, w, h)
@@ -59,6 +230,18 @@ function RF.DeferRebuild(list)
 		list.Queued = false
 		list.Rebuild()
 	end)
+end
+
+function RF.PanelPause(panel)
+	local paused = gui.IsGameUIVisible()
+
+	if panel.RFPaused == paused then return end
+
+	panel.RFPaused = paused
+
+	panel:SetMouseInputEnabled(not paused)
+	panel:SetKeyboardInputEnabled(false)
+	panel:SetVisible(not paused)
 end
 
 function RF.StyleButton(btn, accent)
@@ -266,7 +449,7 @@ local function BuildPlayers(parent)
 	return wrap
 end
 
-local function PushSetting(key, value)
+function RF.PushSetting(key, value)
 	local info = RF.VarByKey[key]
 	if not info then return end
 
@@ -313,7 +496,7 @@ local function StepButton(parent, label, action)
 	return btn
 end
 
-local function SettingRow(parent, label, key, step, format)
+function RF.SettingRow(parent, label, key, step, format)
 	local row = parent:Add("DPanel")
 	row:Dock(TOP)
 	row:SetTall(25)
@@ -327,8 +510,8 @@ local function SettingRow(parent, label, key, step, format)
 		draw.SimpleText(format(RF.Get(key)), "RFBody", w - 60, h * 0.5, U.TEXT, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
 	end
 
-	StepButton(row, "+", function() PushSetting(key, RF.Get(key) + step) end)
-	StepButton(row, "-", function() PushSetting(key, RF.Get(key) - step) end)
+	StepButton(row, "+", function() RF.PushSetting(key, RF.Get(key) + step) end)
+	StepButton(row, "-", function() RF.PushSetting(key, RF.Get(key) - step) end)
 
 	return row
 end
@@ -373,19 +556,23 @@ local function BuildCenter(parent)
 	rows:DockMargin(6, 30, 6, 6)
 	rows.Paint = function() end
 
-	SettingRow(rows, "Round length", "RoundTime", 15, function(v)
+	RF.SettingRow(rows, "Rounds per match", "RoundsPerMatch", 1, function(v)
+		return tostring(math.floor(v))
+	end)
+
+	RF.SettingRow(rows, "Round length", "RoundTime", 15, function(v)
 		return string.format("%d:%02d", math.floor(v / 60), v % 60)
 	end)
 
-	SettingRow(rows, "Score limit", "ScoreLimit", 1, function(v)
+	RF.SettingRow(rows, "Score limit", "ScoreLimit", 1, function(v)
 		return v > 0 and tostring(math.floor(v)) or "off"
 	end)
 
-	SettingRow(rows, "Players needed", "MinPlayers", 1, function(v)
+	RF.SettingRow(rows, "Players needed", "MinPlayers", 1, function(v)
 		return string.format("%d of %d here", math.floor(v), #player.GetAll())
 	end)
 
-	SettingRow(rows, "Friendly fire", "FriendlyFire", 1, function(v)
+	RF.SettingRow(rows, "Friendly fire", "FriendlyFire", 1, function(v)
 		return v >= 1 and "ON" or "OFF"
 	end)
 
@@ -414,17 +601,8 @@ function Lobby.Open()
 	Panel:MakePopup()
 	Panel:SetKeyboardInputEnabled(false)
 
-	Panel:SetPopupStayAtBack(true)
 
-	Panel.Think = function(self)
-		local paused = gui.IsGameUIVisible()
-
-		if self.Paused ~= paused then
-			self.Paused = paused
-			self:SetMouseInputEnabled(not paused)
-			self:SetKeyboardInputEnabled(false)
-		end
-	end
+	Panel.Think = RF.PanelPause
 
 	Panel.Paint = function(self, pw, ph)
 		RF.Box(0, 0, pw, ph, U.BG)

@@ -21,19 +21,29 @@ BANNERS = [
     ("gt_lots.png", "lots.jpg", (0, 235, 1920, 853)),
 ]
 
+# Menu backgrounds are numbered in this folder order, so appending a folder
+# never renumbers what is already shipped. The banner shots serve as both.
+BACKGROUND_SOURCES = ["backgrounds", "banners"]
+
 
 def build_backgrounds():
     out = os.path.join(GAMEMODE, "backgrounds")
     os.makedirs(out, exist_ok=True)
 
     found = []
-    for pattern in ("*.jpg", "*.JPG", "*.jpeg", "*.JPEG"):
-        found.extend(glob.glob(os.path.join(SOURCE, "backgrounds", pattern)))
+    for folder in BACKGROUND_SOURCES:
+        here = []
+        for pattern in ("*.jpg", "*.JPG", "*.jpeg", "*.JPEG"):
+            here.extend(glob.glob(os.path.join(SOURCE, folder, pattern)))
+        found.extend(sorted(set(here)))
 
-    for index, path in enumerate(sorted(set(found)), 1):
+    for stale in glob.glob(os.path.join(out, "rollerfight*.jpg")):
+        os.remove(stale)
+
+    for index, path in enumerate(found, 1):
         dest = os.path.join(out, "rollerfight%02d.jpg" % index)
         shutil.copyfile(path, dest)
-        print("background -> %s" % os.path.basename(dest))
+        print("background %-22s -> %s" % (os.path.basename(path), os.path.basename(dest)))
 
 
 def build_banners():
