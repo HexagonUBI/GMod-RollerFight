@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Discord
+    url: https://discord.gg/BBsh8KCEhY
+    about: Questions, help, and anything that is not a bug report or a feature request.
   - name: Licence and permission requests
     url: https://github.com/HexagonUBI/GMod-RollerFight/blob/main/LICENSE
-    about: RollerFight is all rights reserved. Read the terms, then open a blank issue saying exactly what you want to do with it.
+    about: RollerFight is all rights reserved. Read the terms, then ask on Discord before doing anything with it.

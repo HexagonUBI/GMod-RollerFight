@@ -12,6 +12,7 @@ They are not NPCs. Every rollermine on the map is a player.
 <img src="https://img.shields.io/badge/Garry's%20Mod-gamemode-EE8220?style=for-the-badge" alt="Garry's Mod gamemode">
 <img src="https://img.shields.io/badge/Lua-5.1-2C2D72?style=for-the-badge&logo=lua&logoColor=white" alt="Lua">
 <img src="https://img.shields.io/badge/licence-all%20rights%20reserved-C1272D?style=for-the-badge" alt="All rights reserved">
+<a href="https://discord.gg/BBsh8KCEhY"><img src="https://img.shields.io/badge/Discord-join-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
 
 </div>
 
@@ -106,10 +107,16 @@ tools\install.bat /pack     builds rollerfight.gma
 
 Repo root is the addon root, so it works as a live dev folder and as a workshop upload.
 
+## Contact
+
+Bug reports and feature requests go through [issues](https://github.com/HexagonUBI/GMod-RollerFight/issues).
+Everything else, including questions and permission requests, goes to
+[Discord](https://discord.gg/BBsh8KCEhY).
+
 ## Licence
 
 All rights reserved. See [LICENSE](LICENSE).
 
 You may play it and run it unmodified on your own server. You may not reupload it, modify it, or
-reuse any part of it in another project without written permission. Issues and bug reports are
-welcome, the code is not open for reuse.
+reuse any part of it in another project without written permission. Reports are welcome, the code is
+not open for reuse.
