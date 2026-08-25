@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Licence and permission requests
+    url: https://github.com/HexagonUBI/GMod-RollerFight/blob/main/LICENSE
+    about: RollerFight is all rights reserved. Read the terms, then open a blank issue saying exactly what you want to do with it.

@@ -1,0 +1,108 @@
+name: Bug report
+description: Something in RollerFight does not work the way it should
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        RollerFight has to own the camera, movement and input hooks. Another addon fighting it for
+        those is by far the most common cause of odd behaviour, so if you can, reproduce it with
+        only RollerFight enabled before filing.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happens
+      description: What went wrong, and what you expected instead.
+      placeholder: |
+        Expected:
+        Actual:
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to reproduce it
+      description: Numbered steps someone else can follow from a fresh map load.
+      placeholder: |
+        1. Start a listen server on phys_dmm_house_r
+        2. Ready up and let the round start
+        3.
+    validations:
+      required: true
+
+  - type: input
+    id: map
+    attributes:
+      label: Map
+      placeholder: phys_dmm_house_r
+    validations:
+      required: true
+
+  - type: dropdown
+    id: gametype
+    attributes:
+      label: Gametype
+      options:
+        - Deathmatch
+        - Team Deathmatch
+        - Last One To Stand
+        - Training mode
+        - Not gametype specific
+    validations:
+      required: true
+
+  - type: dropdown
+    id: state
+    attributes:
+      label: Round state
+      description: Which part of the round it happened in.
+      options:
+        - Waiting for players, ready up lobby
+        - Choosing teams
+        - Starting, or the countdown
+        - Round in progress
+        - Round over
+        - Not round specific
+    validations:
+      required: true
+
+  - type: dropdown
+    id: host
+    attributes:
+      label: How you were running it
+      options:
+        - Singleplayer
+        - Listen server, Start New Game
+        - Dedicated server
+        - Joined someone else's server
+    validations:
+      required: true
+
+  - type: textarea
+    id: console
+    attributes:
+      label: Console output
+      description: Anything red in the console. Set developer 1 first if nothing obvious shows up.
+      render: text
+
+  - type: textarea
+    id: addons
+    attributes:
+      label: Other addons
+      description: >
+        Type rf_conflicts in the console and paste what it prints. Also list anything you have
+        installed that touches movement, the camera, viewmodels or playermodels.
+      render: text
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I am on the current Workshop version, not an older local copy
+          required: true
+        - label: I searched the open issues and this is not already reported
+          required: true

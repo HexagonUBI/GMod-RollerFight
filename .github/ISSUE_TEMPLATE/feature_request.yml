@@ -1,0 +1,58 @@
+name: Feature request
+description: Suggest something for RollerFight
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Numbers usually do not need a feature request. Nearly every tunable is already an rf_ convar
+        you can change live under Tab, Admin, from damage and energy costs to camera distance.
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you want
+      description: The idea itself, in a sentence or two.
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem it solves
+      description: What is missing or annoying right now that this would fix. Concrete beats abstract.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - Movement and physics
+        - Combat and damage
+        - HUD and interface
+        - Lobby, ready up and round flow
+        - Gametypes
+        - Bots
+        - Music and sound
+        - Admin tools and convars
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: detail
+    attributes:
+      label: How it should work
+      description: Rules, edge cases, what happens when it goes wrong. Skip this if the idea is obvious.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched the open issues and this is not already suggested
+          required: true
