@@ -84,10 +84,40 @@ net.Receive("rf_roundend", function()
 	RF.RoundReason = net.ReadString()
 end)
 
+local function SpectateBar()
+	local ply = LocalPlayer()
+	if IsValid(ply:GetNWEntity("rf_mine")) then return end
+	if not RF.InRound() then return end
+
+	local watch = ply:GetNWEntity("rf_watch")
+	local w, h = 460, 54
+	local x, y = (ScrW() - w) * 0.5, ScrH() - 92
+
+	surface.SetDrawColor(12, 12, 12, 220)
+	surface.DrawRect(x, y, w, h)
+	surface.SetDrawColor(238, 130, 32, 240)
+	surface.DrawRect(x, y, w, 2)
+
+	if IsValid(watch) then
+		local col = RF.PlayerColor(watch)
+
+		draw.SimpleText("SPECTATING", "RFHudSmall", x + 14, y + 14, Color(150, 150, 150), 0, TEXT_ALIGN_CENTER)
+		draw.SimpleText(watch:Nick(), "RFHudTimer", x + 14, y + 36, col, 0, TEXT_ALIGN_CENTER)
+		draw.SimpleText(watch:Frags() .. " kills", "RFHudSmall", x + w - 14, y + 36,
+			Color(220, 220, 220), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+	else
+		draw.SimpleText("NOBODY LEFT TO WATCH", "RFHudSmall", x + 14, y + 26, Color(200, 200, 200), 0, TEXT_ALIGN_CENTER)
+	end
+
+	draw.SimpleText("LEFT CLICK NEXT   RIGHT CLICK PREVIOUS", "RFSmall", x + w - 14, y + 14,
+		Color(150, 150, 150), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+end
+
 function GM:HUDPaint()
 	if RF.Score and RF.Score.IsOpen and RF.Score.IsOpen() then return end
 
 	RoundBanner()
+	SpectateBar()
 
 	local ply = LocalPlayer()
 	local mine = ply:GetNWEntity("rf_mine")

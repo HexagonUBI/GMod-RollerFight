@@ -34,6 +34,40 @@ function RF.PlayerColor(ply)
 	return RF.TeamColors[ply:Team()] or RF.TeamColors[TEAM_FREE]
 end
 
+function RF.Playing(ply)
+	return IsValid(ply) and not ply:GetNWBool("rf_spectating", false)
+end
+
+function RF.TeamRoster(teamID)
+	local list = {}
+
+	for _, ply in ipairs(player.GetAll()) do
+		if RF.Playing(ply) and ply:Team() == teamID then table.insert(list, ply) end
+	end
+
+	table.sort(list, function(a, b) return a:EntIndex() < b:EntIndex() end)
+
+	return list
+end
+
+function RF.TeamCap()
+	local total = 0
+
+	for _, ply in ipairs(player.GetAll()) do
+		if RF.Playing(ply) then total = total + 1 end
+	end
+
+	return math.max(1, math.ceil(total * 0.5))
+end
+
+function RF.CanJoinTeam(ply, teamID)
+	if teamID ~= TEAM_COMBINE and teamID ~= TEAM_REBEL then return false end
+	if not RF.Playing(ply) then return false end
+	if ply:Team() == teamID then return false end
+
+	return #RF.TeamRoster(teamID) < RF.TeamCap()
+end
+
 function GM:CreateTeams()
 	team.SetUp(TEAM_COMBINE, "Combine", RF.TeamColors[TEAM_COMBINE])
 	team.SetUp(TEAM_REBEL, "Rebels", RF.TeamColors[TEAM_REBEL])

@@ -1,20 +1,22 @@
-function RF.MusicCue(ply, cue)
-	if not IsValid(ply) then return end
+function RF.HideBody(ply)
+	if not ply:GetNoDraw() then ply:SetNoDraw(true) end
 
-	net.Start("rf_music_cue")
-	net.WriteString(cue)
-	net.Send(ply)
+	ply:SetNotSolid(true)
+	ply:DrawShadow(false)
+	RF.DropHands(ply)
 end
 
 function RF.RideMine(ply, mine)
 	ply:StripWeapons()
 	ply:AllowFlashlight(true)
+	RF.HideBody(ply)
 	ply:Spectate(OBS_MODE_CHASE)
 	ply:SpectateEntity(mine)
 end
 
 function RF.FreeRoam(ply)
 	ply:StripWeapons()
+	RF.HideBody(ply)
 	ply:Spectate(OBS_MODE_ROAMING)
 	ply:SpectateEntity(NULL)
 end
@@ -32,6 +34,8 @@ function RF.DetachPlayer(ply)
 end
 
 function RF.EnforceDetached(ply)
+	RF.HideBody(ply)
+
 	if ply:GetNWBool("rf_spectating", false) then return end
 
 	local mine = ply.RFMine
@@ -131,7 +135,6 @@ function RF.GiveMine(ply, pos)
 	ply.RFMine = mine
 	ply:SetNWEntity("rf_mine", mine)
 	RF.RideMine(ply, mine)
-	RF.MusicCue(ply, "spawn")
 
 	return mine
 end
@@ -159,7 +162,6 @@ function RF.OnMineDestroyed(mine, attacker, cause, assist)
 			attacker:AddFrags(-1)
 		else
 			attacker:AddFrags(1)
-			RF.MusicCue(attacker, "kill")
 		end
 	end
 
@@ -204,13 +206,42 @@ function GM:PlayerInitialSpawn(ply)
 	RF.AssignColor(ply)
 end
 
+function RF.DropHands(ply)
+	local hands = ply:GetHands()
+
+	if IsValid(hands) then hands:Remove() end
+
+	ply.RFHands = nil
+end
+
 function GM:PlayerSpawn(ply, transition)
-	self.BaseClass.PlayerSpawn(self, ply, transition)
+	ply:UnSpectate()
+	ply:StripWeapons()
+	ply:SetModel("models/player/kleiner.mdl")
+	ply:SetMoveType(MOVETYPE_NOCLIP)
+	ply:SetNoDraw(true)
+	ply:SetNotSolid(true)
+	ply:DrawShadow(false)
+	ply:SetHealth(100)
+
+	RF.DropHands(ply)
 	RF.DetachPlayer(ply)
 
 	if RF.InRound() and RF.GetGameType().lives <= 0 then
 		RF.GiveMine(ply, RF.SelectSpawnPos(ply))
 	end
+end
+
+function GM:PlayerSetHandsModel(ply, hands)
+	if IsValid(hands) then hands:Remove() end
+end
+
+function GM:GetFallDamage()
+	return 0
+end
+
+function GM:CanPlayerSuicide()
+	return false
 end
 
 function GM:PlayerLoadout(ply)

@@ -97,6 +97,9 @@ function Discord.BuildPresence()
 	if round == RF.STATE_WAITING then
 		details = "Waiting For Players"
 		state = RF.IsTraining(ply) and "Training" or game.GetMap()
+	elseif round == RF.STATE_TEAMPICK then
+		details = "Choosing Teams"
+		state = gt.name
 	elseif round == RF.STATE_POST then
 		details = "Round Over"
 		state = string.format("%d kills, %d deaths", ply:Frags(), ply:Deaths())

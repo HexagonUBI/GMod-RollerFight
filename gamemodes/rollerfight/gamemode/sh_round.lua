@@ -3,9 +3,11 @@ RF.STATE_INTERMISSION = 1
 RF.STATE_COUNTDOWN = 2
 RF.STATE_ACTIVE = 3
 RF.STATE_POST = 4
+RF.STATE_TEAMPICK = 5
 
 RF.StateNames = {
 	[RF.STATE_WAITING] = "Waiting For Players",
+	[RF.STATE_TEAMPICK] = "Choosing Teams",
 	[RF.STATE_INTERMISSION] = "Starting",
 	[RF.STATE_COUNTDOWN] = "Get Ready",
 	[RF.STATE_ACTIVE] = "Round In Progress",

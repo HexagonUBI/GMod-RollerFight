@@ -24,10 +24,13 @@ function EFFECT:Init(data)
 		self.Color = self.Source:GetTeamColor()
 	end
 
-	local mins, maxs = OrderVectors(self.StartPos, self.Origin)
-	local pad = Vector(1, 1, 1) * (self.BranchReach + 64)
+	local a, b = self.StartPos, self.Origin
+	local pad = self.BranchReach + 96
 
-	self:SetRenderBoundsWS(mins - pad, maxs + pad)
+	local mins = Vector(math.min(a.x, b.x), math.min(a.y, b.y), math.min(a.z, b.z)) - Vector(pad, pad, pad)
+	local maxs = Vector(math.max(a.x, b.x), math.max(a.y, b.y), math.max(a.z, b.z)) + Vector(pad, pad, pad)
+
+	self:SetRenderBoundsWS(mins, maxs)
 end
 
 function EFFECT:Think()

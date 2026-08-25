@@ -18,6 +18,8 @@ function ENT:Initialize()
 	self.HitTimes = {}
 	self.DamageLog = {}
 	self.LastThink = CurTime()
+	self.Drain = 0
+	self.NextHeal = 0
 
 	self:SetEnergy(RF.Get("MaxEnergy"))
 	self:SetAttackMode(false)
@@ -318,6 +320,8 @@ function ENT:UpdateEnergy(dt)
 	if self.Sprinting and self.Grounded and not self:GetWishDirection():IsZero() then drain = drain + RF.Get("SprintDrain") end
 	if self:GetAttackMode() then drain = drain + RF.Get("AttackDrain") end
 
+	self.Drain = drain
+
 	if drain > 0 then
 		self:SetEnergy(math.max(0, self:GetEnergy() - drain * dt))
 		self.NextRegen = CurTime() + RF.Get("EnergyRegenDelay")
@@ -333,6 +337,21 @@ function ENT:UpdateEnergy(dt)
 	elseif self:GetExhausted() and self:GetEnergy() >= RF.Get("ExhaustRecoverAt") then
 		self:SetExhausted(false)
 	end
+end
+
+function ENT:UpdateHealth(dt)
+	local rate = RF.Get("HealthRegen")
+	if rate <= 0 then return end
+
+	if self.Detonating or self:GetDying() then return end
+	if self:GetBuried() or self:GetAttackMode() then return end
+	if (self.Drain or 0) > 0 then return end
+	if CurTime() < (self.NextHeal or 0) then return end
+
+	local max = self:GetMaxHealth()
+	if self:Health() >= max then return end
+
+	self:SetHealth(math.min(max, self:Health() + rate * dt))
 end
 
 function ENT:Think()
@@ -355,6 +374,7 @@ function ENT:Think()
 	end
 
 	self:UpdateEnergy(dt)
+	self:UpdateHealth(dt)
 
 	return true
 end
@@ -523,6 +543,8 @@ end
 
 function ENT:OnTakeDamage(dmg)
 	if self:GetBuried() or self.Detonating then return end
+
+	self.NextHeal = CurTime() + RF.Get("HealthRegenDelay")
 
 	local inflictor = dmg:GetInflictor()
 

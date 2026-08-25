@@ -73,21 +73,35 @@ function Cam.Focus()
 	return best
 end
 
+local function Clear(from, to)
+	local tr = util.TraceLine({
+		start = from,
+		endpos = to,
+		mask = MASK_SOLID_BRUSHONLY
+	})
+
+	return not tr.Hit
+end
+
 function Cam.NextShot(instant)
 	if #Cam.Anchors < 2 then Cam.BuildAnchors() end
 	if #Cam.Anchors < 2 then return end
 
 	Cam.From = Cam.To or Cam.Anchors[math.random(#Cam.Anchors)]
-	Cam.To = Cam.Anchors[math.random(#Cam.Anchors)]
+	if instant then Cam.From = Cam.Anchors[math.random(#Cam.Anchors)] end
 
-	local guard = 0
+	local pick
 
-	while Cam.To == Cam.From and guard < 8 do
-		Cam.To = Cam.Anchors[math.random(#Cam.Anchors)]
-		guard = guard + 1
+	for _ = 1, 24 do
+		local candidate = Cam.Anchors[math.random(#Cam.Anchors)]
+
+		if candidate ~= Cam.From and Clear(Cam.From, candidate) then
+			pick = candidate
+			break
+		end
 	end
 
-	if instant then Cam.From = Cam.Anchors[math.random(#Cam.Anchors)] end
+	Cam.To = pick or Cam.From
 
 	Cam.Started = CurTime()
 	Cam.Length = instant and RF.Get("IntermissionShot") or RF.Get("LobbyShot")

@@ -1,6 +1,8 @@
 RF.ConflictHooks = {
 	"CalcView",
 	"CalcViewModelView",
+	"PreDrawViewModel",
+	"PostDrawViewModel",
 	"ShouldDrawLocalPlayer",
 	"SetupMove",
 	"Move",
@@ -19,6 +21,10 @@ RF.CompatAllow = {
 	"rollerfight",
 	"ulib",
 	"ulx"
+}
+
+RF.CompatKill = {
+	"BeatrunCheckPlayerModelChange"
 }
 
 local function Allowed(name)
@@ -70,6 +76,10 @@ function RF.StripConflicts()
 
 	for _, entry in ipairs(found) do
 		names[entry.name] = true
+	end
+
+	for _, name in ipairs(RF.CompatKill) do
+		names[name] = true
 	end
 
 	for _, entry in ipairs(RF.FindSiblings(names)) do

@@ -93,9 +93,9 @@ RF.MusicBeds = {
 	}
 }
 
-RF.MusicStings = {
-	spawn = "music/stingers/hl1_stinger_song7.mp3",
-	kill = "music/stingers/hl1_stinger_song8.mp3",
+RF.MusicStings = {}
+
+RF.MusicCues = {
 	intermission = "music/vlvx_song20.mp3",
 	roundstart = "music/vlvx_song4.mp3",
 	roundover = "music/vlvx_song3.mp3"
@@ -145,6 +145,8 @@ RF.VarList = {
 	{ key = "HitNPCs", group = "Combat", label = "Damage NPCs", default = 1, min = 0, max = 1 },
 	{ key = "SpeedDamageRef", group = "Combat", label = "Speed For Full Bonus", default = 700, min = 50, max = 3000 },
 	{ key = "SpeedDamageBonus", group = "Combat", label = "Max Speed Damage Bonus", default = 0.5, min = 0, max = 3 },
+	{ key = "HealthRegen", group = "Combat", label = "Health Regen Per Second", default = 4, min = 0, max = 100 },
+	{ key = "HealthRegenDelay", group = "Combat", label = "Regen Delay After Damage", default = 5, min = 0, max = 60 },
 
 	{ key = "MaxEnergy", group = "Energy", label = "Max Energy", default = 150, min = 1, max = 500 },
 	{ key = "SprintDrain", group = "Energy", label = "Sprint Drain", default = 24, min = 0, max = 200 },
@@ -181,6 +183,7 @@ RF.VarList = {
 	{ key = "DoorSpeed", group = "Physics", label = "Speed Needed To Open", default = 90, min = 0, max = 600 },
 	{ key = "IntermissionTime", group = "Round", label = "Intermission Length", default = 8, min = 2, max = 30 },
 	{ key = "CountdownTime", group = "Round", label = "Countdown Length", default = 3, min = 1, max = 10 },
+	{ key = "TeamPickTime", group = "Round", label = "Team Pick Length", default = 20, min = 5, max = 120 },
 	{ key = "PostTime", group = "Round", label = "Stats Screen Length", default = 12, min = 3, max = 60 },
 
 	{ key = "CameraDistance", group = "Camera", label = "Camera Distance", default = 95, min = 40, max = 400, realm = "client" },

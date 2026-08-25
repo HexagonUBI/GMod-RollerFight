@@ -172,8 +172,42 @@ function RF.EnterWaiting()
 		ply:SetFrags(0)
 		ply:SetDeaths(0)
 		ply:SetNWInt("rf_lives", 0)
+		ply:SetTeam(TEAM_FREE)
 		RF.RemoveMine(ply)
 	end
+end
+
+function RF.EnterTeamPick()
+	for _, ply in ipairs(player.GetAll()) do
+		ply:SetNWBool("rf_training", false)
+		ply:SetTeam(TEAM_FREE)
+		RF.RemoveMine(ply)
+	end
+
+	RF.SetState(RF.STATE_TEAMPICK, RF.Get("TeamPickTime"))
+end
+
+function RF.TeamPickDone()
+	for _, ply in ipairs(player.GetAll()) do
+		if not ply:IsBot() and RF.Playing(ply) and ply:Team() == TEAM_FREE then return false end
+	end
+
+	return true
+end
+
+function RF.FinishTeamPick()
+	for _, ply in ipairs(player.GetAll()) do
+		if ply:Team() ~= TEAM_COMBINE and ply:Team() ~= TEAM_REBEL then RF.AssignTeam(ply) end
+	end
+end
+
+function RF.StartMatch()
+	if RF.GetGameType().teams then
+		RF.EnterTeamPick()
+		return
+	end
+
+	RF.EnterIntermission()
 end
 
 function RF.EnterIntermission()
@@ -202,7 +236,7 @@ function RF.EnterCountdown()
 		ply:SetNWInt("rf_lives", gt.lives)
 
 		if gt.teams then
-			RF.AssignTeam(ply)
+			if ply:Team() ~= TEAM_COMBINE and ply:Team() ~= TEAM_REBEL then RF.AssignTeam(ply) end
 		else
 			ply:SetTeam(TEAM_FREE)
 		end
@@ -246,7 +280,7 @@ function RF.AssignTeam(ply)
 	local combine, rebel = 0, 0
 
 	for _, other in ipairs(player.GetAll()) do
-		if other ~= ply then
+		if other ~= ply and RF.Playing(other) then
 			if other:Team() == TEAM_COMBINE then combine = combine + 1 end
 			if other:Team() == TEAM_REBEL then rebel = rebel + 1 end
 		end
@@ -338,14 +372,27 @@ local function Tick()
 			SetGlobalFloat("rf_autostart", CurTime() + want)
 		elseif CurTime() >= autoAt then
 			SetGlobalFloat("rf_autostart", 0)
-			RF.EnterIntermission()
+			RF.StartMatch()
 		end
+
+		return
+	end
+
+	if state == RF.STATE_TEAMPICK and RF.TeamPickDone() then
+		RF.EnterIntermission()
 
 		return
 	end
 
 	if RF.StateTimeLeft() > 0 then
 		if state == RF.STATE_ACTIVE then RF.CheckWin() end
+
+		return
+	end
+
+	if state == RF.STATE_TEAMPICK then
+		RF.FinishTeamPick()
+		RF.EnterIntermission()
 
 		return
 	end
@@ -391,6 +438,16 @@ net.Receive("rf_gametype", function(len, ply)
 	if cv then cv:SetInt(index) end
 end)
 
+net.Receive("rf_jointeam", function(len, ply)
+	if RF.GetState() ~= RF.STATE_TEAMPICK then return end
+	if not RF.GetGameType().teams then return end
+
+	local want = net.ReadUInt(8)
+	if not RF.CanJoinTeam(ply, want) then return end
+
+	ply:SetTeam(want)
+end)
+
 net.Receive("rf_pause", function(len, ply)
 	if not RF.IsAdmin(ply) then return end
 
@@ -407,7 +464,7 @@ net.Receive("rf_forcestart", function(len, ply)
 	if not RF.IsAdmin(ply) then return end
 	if RF.GetState() ~= RF.STATE_WAITING then return end
 
-	RF.EnterIntermission()
+	RF.StartMatch()
 end)
 
 hook.Add("PlayerDisconnected", "RF.RoundLeave", function()

@@ -51,16 +51,35 @@ local function StyleTab(btn)
 	end
 end
 
-local function BuildScores(parent)
-	local page = vgui.Create("DPanel", parent)
-	page.Paint = function() end
+local ROW, GAP = 46, 3
 
-	local head = page:Add("DPanel")
+local function Column(parent, teamID, wide)
+	local wrap = parent:Add("DPanel")
+
+	if wide then
+		wrap:Dock(FILL)
+	else
+		wrap:Dock(LEFT)
+		wrap:SetWide(wide == false and 0 or 0)
+	end
+
+	wrap.Paint = function() end
+
+	local head = wrap:Add("DPanel")
 	head:Dock(TOP)
-	head:SetTall(24)
+	head:SetTall(26)
 	head:DockMargin(0, 0, 0, 4)
 	head.Paint = function(self, w, h)
 		Box(0, 0, w, h, Color(24, 24, 24))
+
+		if teamID then
+			Box(0, 0, 4, h, RF.TeamColors[teamID] or COL_DIM)
+			draw.SimpleText(string.upper(team.GetName(teamID) or ""), "RFHead", 14, h * 0.5,
+				RF.TeamColors[teamID] or COL_TEXT, 0, TEXT_ALIGN_CENTER)
+			draw.SimpleText("K   D", "RFSmall", w - 14, h * 0.5, COL_DIM, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+
+			return
+		end
 
 		draw.SimpleText("PLAYER", "RFSmall", 80, h * 0.5, COL_DIM, 0, TEXT_ALIGN_CENTER)
 		draw.SimpleText("KILLS", "RFSmall", w - 250, h * 0.5, COL_DIM, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
@@ -69,18 +88,19 @@ local function BuildScores(parent)
 		draw.SimpleText("PING", "RFSmall", w - 25, h * 0.5, COL_DIM, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 	end
 
-	local list = page:Add("DScrollPanel")
+	local list = wrap:Add("DScrollPanel")
 	list:Dock(FILL)
-	list:DockMargin(0, 0, 0, 0)
-
-	local ROW, GAP = 46, 3
 
 	list.Rebuild = function()
 		list:Clear()
 
 		local canvas = list:GetCanvas()
 		local width = RF.ListWidth(list, 2)
-		local players = Sorted()
+		local players = {}
+
+		for _, ply in ipairs(Sorted()) do
+			if not teamID or ply:Team() == teamID then table.insert(players, ply) end
+		end
 
 		canvas:SetTall(#players * (ROW + GAP))
 
@@ -92,32 +112,47 @@ local function BuildScores(parent)
 
 			local avatar = vgui.Create("AvatarImage", row)
 			avatar:SetSize(32, 32)
-			avatar:SetPos(38, 7)
+			avatar:SetPos(teamID and 10 or 38, 7)
 			avatar:SetPlayer(ply, 64)
 			avatar:SetMouseInputEnabled(false)
 
 			row.Paint = function(self, w, h)
 				Box(0, 0, w, h, self:IsHovered() and Color(54, 54, 54) or (index % 2 == 0 and COL_ROWALT or COL_ROW))
 				Box(0, 0, 4, h, RF.PlayerColor(ply))
-				Outline(36, 5, 36, 36, Color(90, 90, 90))
+				Outline(teamID and 8 or 36, 5, 36, 36, Color(90, 90, 90))
 
 				if ply == LocalPlayer() then Outline(0, 0, w, h, COL_ACCENT) end
 
-				draw.SimpleText(index, "RFHead", 20, h * 0.5, COL_DIM, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-				draw.SimpleText(ply:Nick(), "RFBody", 80, h * 0.5 - 8, COL_TEXT, 0, TEXT_ALIGN_CENTER)
+				local textX = teamID and 52 or 80
+
+				if not teamID then
+					draw.SimpleText(index, "RFHead", 20, h * 0.5, COL_DIM, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+				end
+
+				draw.SimpleText(ply:Nick(), "RFBody", textX, h * 0.5 - 8, COL_TEXT, 0, TEXT_ALIGN_CENTER)
 
 				local gt = RF.GetGameType()
-				local note = team.GetName(ply:Team()) or ""
+				local note = ply:Ping() .. " ms"
 
 				if RF.GetState() == RF.STATE_WAITING then
 					note = RF.IsReady(ply) and "ready" or (RF.IsTraining(ply) and "training" or "not ready")
 				elseif gt.lives > 0 and RF.InRound() then
 					note = IsValid(ply:GetNWEntity("rf_mine")) and "alive" or "eliminated"
+				elseif not IsValid(ply:GetNWEntity("rf_mine")) and RF.InRound() then
+					note = "respawning"
 				end
 
-				draw.SimpleText(note, "RFSmall", 80, h * 0.5 + 10, COL_DIM, 0, TEXT_ALIGN_CENTER)
+				draw.SimpleText(note, "RFSmall", textX, h * 0.5 + 10, COL_DIM, 0, TEXT_ALIGN_CENTER)
 
 				local kills, deaths = ply:Frags(), ply:Deaths()
+
+				if teamID then
+					draw.SimpleText(kills .. "   " .. deaths, "RFHead", w - 14, h * 0.5,
+						COL_TEXT, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+
+					return
+				end
+
 				local ratio = deaths > 0 and string.format("%.2f", kills / deaths) or tostring(kills)
 				local ping = ply:Ping()
 
@@ -132,7 +167,7 @@ local function BuildScores(parent)
 	end
 
 	list.Think = function(self)
-		local stamp = #player.GetAll() .. "x" .. self:GetWide()
+		local stamp = #player.GetAll() .. "x" .. self:GetWide() .. "x" .. RF.GetState()
 
 		if self.Stamp == stamp and (self.Next or 0) > CurTime() then return end
 
@@ -141,18 +176,30 @@ local function BuildScores(parent)
 		RF.DeferRebuild(self)
 	end
 
-	local back = page:Add("DButton")
-	back:Dock(BOTTOM)
-	back:DockMargin(0, 6, 0, 0)
-	back:SetTall(34)
+	return wrap
+end
+
+local function BuildScores(parent)
+	local page = vgui.Create("DPanel", parent)
+	page.Paint = function() end
+
+	local footer = page:Add("DPanel")
+	footer:Dock(BOTTOM)
+	footer:SetTall(34)
+	footer:DockMargin(0, 6, 0, 0)
+	footer.Paint = function() end
+
+	local back = footer:Add("DButton")
+	back:Dock(FILL)
 	back:SetText("BACK TO READY UP")
 	RF.StyleButton(back, true)
 
 	back.Think = function(self)
 		local me = LocalPlayer()
+		local show = RF.IsTraining(me) or me:GetNWBool("rf_spectating", false)
 
-		self:SetVisible(RF.IsTraining(me) or me:GetNWBool("rf_spectating", false))
-		self:SetText(RF.IsTraining(me) and "LEAVE TRAINING, BACK TO READY UP" or "LEAVE SPECTATOR, BACK TO READY UP")
+		self:SetVisible(show)
+		self:SetText(RF.IsTraining(me) and "LEAVE TRAINING" or "LEAVE FREECAM")
 	end
 
 	back.DoClick = function()
@@ -166,6 +213,34 @@ local function BuildScores(parent)
 
 		net.SendToServer()
 		RF.Score.Close()
+	end
+
+	local body = page:Add("DPanel")
+	body:Dock(FILL)
+	body.Paint = function() end
+
+	local solo = Column(body, nil, true)
+	local left = Column(body, TEAM_COMBINE)
+	local right = Column(body, TEAM_REBEL)
+
+	body.PerformLayout = function(self, w, h)
+		local teams = RF.GetGameType().teams
+
+		solo:SetVisible(not teams)
+		left:SetVisible(teams)
+		right:SetVisible(teams)
+
+		if teams then
+			local half = math.floor((w - 10) * 0.5)
+
+			left:SetPos(0, 0)
+			left:SetSize(half, h)
+			right:SetPos(half + 10, 0)
+			right:SetSize(w - half - 10, h)
+		else
+			solo:SetPos(0, 0)
+			solo:SetSize(w, h)
+		end
 	end
 
 	return page

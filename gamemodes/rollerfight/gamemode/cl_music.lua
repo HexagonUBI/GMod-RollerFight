@@ -51,6 +51,7 @@ function Music.StopBed()
 	Music.Mood = nil
 	Music.Track = nil
 	Music.FadeStart = nil
+	Music.CueState = nil
 end
 
 function Music.FadeOut(seconds)
@@ -190,6 +191,42 @@ function Music.PlaySting(cue)
 	end)
 end
 
+function Music.PlayCue(cue)
+	local track = RF.MusicCues[cue]
+	if not track or not Music.Has(track) then return end
+	if not Music.Enabled() then return end
+
+	Music.StopBed()
+
+	if IsValid(Music.Sting) then Music.Sting:Stop() end
+
+	Music.Sting = nil
+	Music.Mood = "cue"
+	Music.Track = track
+	Music.CueState = RF.GetState()
+
+	local generation = Music.Generation
+
+	sound.PlayFile("sound/" .. track, "noblock", function(channel)
+		if not IsValid(channel) then
+			Music.Unavailable = true
+			Music.Mood = nil
+			Music.CueState = nil
+
+			return
+		end
+
+		if generation ~= Music.Generation then
+			channel:Stop()
+			return
+		end
+
+		Music.Bed = channel
+		channel:SetVolume(Music.BedVolume())
+		channel:Play()
+	end)
+end
+
 function Music.MoodFor()
 	local ply = LocalPlayer()
 	if not IsValid(ply) then return "waiting" end
@@ -197,6 +234,7 @@ function Music.MoodFor()
 	local state = RF.GetState()
 
 	if state == RF.STATE_WAITING and not RF.IsTraining(ply) then return "lobby" end
+	if state == RF.STATE_TEAMPICK then return "lobby" end
 	if state == RF.STATE_POST then return "lobby" end
 
 	local mine = ply:GetNWEntity("rf_mine")
@@ -214,6 +252,23 @@ function Music.Update()
 	end
 
 	local state = RF.GetState()
+
+	if Music.CueState then
+		if state ~= Music.CueState then
+			Music.CueState = nil
+
+			if IsValid(Music.Bed) then Music.FadeOut(RF.MusicFadeTime) end
+
+			return
+		end
+
+		if IsValid(Music.Bed) and Music.Bed:GetState() ~= GMOD_CHANNEL_STOPPED then return end
+		if Music.Mood == "cue" and not IsValid(Music.Bed) then return end
+
+		Music.CueState = nil
+		Music.Mood = nil
+	end
+
 	local mood = Music.MoodFor()
 
 	if state == RF.STATE_POST or state == RF.STATE_INTERMISSION then
@@ -249,7 +304,13 @@ end)
 concommand.Add("rf_music_stop", Music.StopAll)
 
 net.Receive("rf_music_cue", function()
-	Music.PlaySting(net.ReadString())
+	local cue = net.ReadString()
+
+	if RF.MusicCues[cue] then
+		Music.PlayCue(cue)
+	else
+		Music.PlaySting(cue)
+	end
 end)
 
 hook.Add("ShutDown", "RF.MusicStop", Music.StopAll)
