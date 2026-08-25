@@ -40,12 +40,6 @@ def mine(draw, cx, cy, r, col=SHAPE, spikes=True):
         ], fill=col)
 
 
-def cross(draw, cx, cy, r, col):
-    d = r * 1.1
-    draw.line([(cx - d, cy - d), (cx + d, cy + d)], fill=col, width=6)
-    draw.line([(cx - d, cy + d), (cx + d, cy - d)], fill=col, width=6)
-
-
 def caption(draw, w, h, title, spec, accent):
     draw.rectangle([0, h - 30, w, h], fill=(0, 0, 0, 205))
     draw.text((10, h - 24), title, fill=accent)
@@ -64,29 +58,6 @@ def banner(path, title, accent, painter, w=820, h=264, drawn=None):
     caption(d, w, h, title, spec, accent)
     img.save(path, optimize=True)
     print("  %-26s %dx%d" % (os.path.basename(path), w, h))
-
-
-def paint_dm(d, w, h, accent):
-    mine(d, w // 2, h // 2 - 16, 54, accent)
-    for i, x in enumerate((w * 0.22, w * 0.78)):
-        mine(d, int(x), int(h * 0.5 - 16), 26, SHAPE)
-
-
-def paint_tdm(d, w, h, accent):
-    blue = (70, 140, 240, 255)
-    gold = (245, 165, 30, 255)
-    d.rectangle([0, 0, w // 2, h], fill=(blue[0] // 6, blue[1] // 6, blue[2] // 6, 255))
-    for x, col in ((w * 0.3, blue), (w * 0.7, gold)):
-        mine(d, int(x), h // 2 - 16, 46, col)
-    d.line([(w // 2, 26), (w // 2, h - 40)], fill=accent, width=3)
-
-
-def paint_lots(d, w, h, accent):
-    mine(d, w // 2, h // 2 - 16, 50, accent)
-    for i, x in enumerate((w * 0.16, w * 0.32, w * 0.68, w * 0.84)):
-        cx, cy = int(x), int(h * 0.5 - 16)
-        mine(d, cx, cy, 24, (90, 90, 90, 255))
-        cross(d, cx, cy, 24, (190, 60, 55, 255))
 
 
 def paint_header(d, w, h, accent):
@@ -176,11 +147,7 @@ def ic_pause(d, s, accent):
 def main():
     os.makedirs(UI, exist_ok=True)
 
-    print("gametype banners")
-    shot = (410, 132)
-    banner(os.path.join(MATS, "gt_dm.png"), "DEATHMATCH", (238, 130, 32, 255), paint_dm, drawn=shot)
-    banner(os.path.join(MATS, "gt_tdm.png"), "TEAM DEATHMATCH", (80, 160, 245, 255), paint_tdm, drawn=shot)
-    banner(os.path.join(MATS, "gt_lots.png"), "LAST ONE TO STAND", (215, 70, 60, 255), paint_lots, drawn=shot)
+    print("gametype banners are real screenshots now, tools/assets.py builds them")
 
     print("interface")
     banner(os.path.join(MATS, "sb_header.png"), "SCOREBOARD", (238, 130, 32, 255), paint_header, 960, 96, (960, 96))
