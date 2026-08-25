@@ -1,39 +1,115 @@
-# GMod RollerFight
-A stylish, unique gamemode where you fight with rollermines between Combines and Rebels.
+<div align="center">
 
+<img src="https://raw.githubusercontent.com/HexagonUBI/GMod-RollerFight/main/docs/hero.png" alt="RollerFight" width="100%">
 
-It's a mod for Garry's Mod that is supposed to be cinematic-based deathmatch between combine rollermines and hacked rollermines(yellow ones from rebels)
-Demo map: Destructible House (REMASTERED)
+<br>
 
-RollerMines have zone around the map to fight in and each team is supposed to punch other rollermines (like they usually do).
+**Drive a Half-Life 2 rollermine in third person and fight by ramming the other mines.**<br>
+They are not NPCs. Every rollermine on the map is a player.
 
-Important: Rollermines are not NPCs - They are fully controlled by player, in a vanilla Half-Life 2 like HUD design, but containing all features and behavior an actual NPC has.
+<br>
 
-You control rollermine in a third person perspective:
-LMB: turn on/off attack mode where you actually damage and punch others by touching other rollermines
-RMB: Slight dash into looked direction (disables attach mode for 3 seconds as you spent a lot of energy on it)
-Ctrl: You can dig into ground (if its soil-like material: sand, dirt, gravel etc). Spacebar makes you jump out
-Space: Jump
-Shift: You roll faster, but it takes some energy which would eventually deplete and you will be on cooldown before attack
+<img src="https://img.shields.io/badge/Garry's%20Mod-gamemode-EE8220?style=for-the-badge" alt="Garry's Mod gamemode">
+<img src="https://img.shields.io/badge/Lua-5.1-2C2D72?style=for-the-badge&logo=lua&logoColor=white" alt="Lua">
+<img src="https://img.shields.io/badge/licence-all%20rights%20reserved-C1272D?style=for-the-badge" alt="All rights reserved">
 
-Camera is supposed to follow rollermine, but slightly smoothed out so it doesnt shake too much or be fully glued to rollermine.
+</div>
 
-When you are out of playing zone (aka arena area), your rollermine becomes red and starts blinking (which is behavior of hacked rollermines where they have only 15 seconds before self-destruct)
-This is to prevent wandering out of the map and encourage players to fight rather than just walking around where player shouldn't be
-When round time is out, all rollermines have same blinking function but at that moment there are also stats showing up on the screen, while gamemode is preparing for next round or mapvote.
+<br>
 
-### Gamemodes
-- Deathmatch
-    - 1v1
-    - 2v2
-    - 3v3
-    - 4v4
-    - 5v5
-Deathmatch is a basic mode where everyone have their own color and fight just for themselves.
-Each player can respawn after 10 seconds from exploding.
+## Screenshots
 
-- Team Deathmatch (2v2-5v5)
-Team Deathmatch is same as Deathmatch, but players get split to 2 teams: Combines (blue) and Rebels (yellow)
+<table>
+<tr>
+<td width="50%"><img src="https://raw.githubusercontent.com/HexagonUBI/GMod-RollerFight/main/docs/shot-1.jpg" alt="Two mines trading hits"></td>
+<td width="50%"><img src="https://raw.githubusercontent.com/HexagonUBI/GMod-RollerFight/main/docs/shot-2.jpg" alt="Shock arc across a room"></td>
+</tr>
+<tr>
+<td width="50%"><img src="https://raw.githubusercontent.com/HexagonUBI/GMod-RollerFight/main/docs/shot-3.jpg" alt="Mine in attack mode"></td>
+<td width="50%"><img src="https://raw.githubusercontent.com/HexagonUBI/GMod-RollerFight/main/docs/shot-4.jpg" alt="Fighting through the wreckage"></td>
+</tr>
+</table>
 
-- Last One To Stand (3v3-10v10)
-Deathmatch, but when player dies they cannot respawn and only spectate around the map or individual players. Last rollermine that is not dead wins
+## How it plays
+
+The shell drives on real physics. You roll, you build speed, and contact is the whole weapon.
+
+| Key | Does |
+| --- | --- |
+| `WASD` | Roll |
+| `Shift` | Sprint, burns energy on the ground |
+| `Space` | Jump, and pop back out when buried |
+| `Left click` | Attack mode, spikes out, contact starts doing damage |
+| `Right click` | Dash forward, hits harder for a moment then locks attack mode out |
+| `Ctrl` | Burrow into soil, sand, grass or snow |
+| `F` | Lamp |
+| `Tab` | Scoreboard |
+
+Sprint, dash and attack mode all draw on one energy pool. Run it dry and you are locked out until it
+recovers. Coast around passive for a few seconds and the shell slowly repairs itself, so backing off
+is a real option. Deep water kills you outright, and so does anything explosive.
+
+## Gametypes
+
+| Mode | Rules |
+| --- | --- |
+| **Deathmatch** | Everyone for themselves, every mine gets its own colour |
+| **Team Deathmatch** | Combine against Rebels, with a team pick screen before the match starts |
+| **Last One To Stand** | One life, no respawns, spectate whoever is left |
+
+## What is in it
+
+- Ready up lobby with a flyby camera over the map, and a training mode to roll around in while you wait
+- Round timer, score limit, countdown and a round over screen
+- Killfeed with a per cause icon and assist credit
+- Scoreboard with a full host settings panel, every tunable is an `rf_` convar
+- Spectate the other players once your mine is destroyed
+- Bots that seek, ram, sprint, dash and jump, so a solo lobby still plays
+- Music director pulling from Half-Life 2, Episode One and Episode Two
+- Optional Discord Rich Presence
+
+## Install
+
+Subscribe to the Steam Workshop item, then pick RollerFight from the gamemode list in the main menu
+and load a `gm_` or `phys_` map. Half-Life 2 has to be mounted. The episodes are optional and only
+widen the music rotation.
+
+<!-- workshop item: https://steamcommunity.com/sharedfiles/filedetails/?id= -->
+
+Built and tested on
+[Destructible House (REMASTERED)](https://steamcommunity.com/sharedfiles/filedetails/?id=3048598528).
+
+To install straight from this repository instead:
+
+```
+tools\install.bat
+```
+
+It finds Garry's Mod through `libraryfolders.vdf`, links the addon, and reports what it did.
+
+## Working on it
+
+```
+python tools/verify.py      static checks, must pass before anything is done
+python tools/build.py       writes dist/, the folder to publish from
+python tools/docs_art.py    rebuilds the images this page uses
+tools\install.bat /pack     builds rollerfight.gma
+```
+
+| Path | Holds |
+| --- | --- |
+| `gamemodes/rollerfight/` | The gamemode |
+| `materials/rollerfight/` | Interface art |
+| `tools/` | Installer and build scripts |
+| `docs/` | Images for this page, not shipped |
+| `dist/` | Generated publish folder, not tracked |
+
+Repo root is the addon root, so it works as a live dev folder and as a workshop upload.
+
+## Licence
+
+All rights reserved. See [LICENSE](LICENSE).
+
+You may play it and run it unmodified on your own server. You may not reupload it, modify it, or
+reuse any part of it in another project without written permission. Issues and bug reports are
+welcome, the code is not open for reuse.

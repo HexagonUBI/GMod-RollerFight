@@ -6,6 +6,10 @@
 	[
 		".git/*",
 		".gitattributes",
+		".gitignore",
+		"dist/*",
+		"docs/*",
+		"LICENSE",
 		"dev-notes/*",
 		"tools/*",
 		"binaries/*",

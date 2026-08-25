@@ -1,0 +1,49 @@
+RollerFight
+Copyright (c) 2026 Hexagon. All rights reserved.
+
+This software, together with its source code, artwork, layouts, text and
+configuration, is proprietary. It is not open source, it is not public domain,
+and no licence is granted by publishing it on the Steam Workshop or on GitHub.
+
+
+PERMITTED
+
+  1. Playing the gamemode through the official Steam Workshop item.
+  2. Running the unmodified gamemode on a Garry's Mod server you operate,
+     including a paid or donation funded community server, provided the
+     gamemode itself is not sold, gated behind payment, or presented as
+     anyone else's work.
+  3. Recording, streaming and screenshotting gameplay, with or without
+     monetisation of that footage.
+
+
+NOT PERMITTED WITHOUT PRIOR WRITTEN PERMISSION FROM THE COPYRIGHT HOLDER
+
+  1. Copying, mirroring, redistributing, reuploading or republishing this work
+     or any part of it, to the Steam Workshop or to any other host.
+  2. Modifying it, or creating derivative or adapted works from it.
+  3. Extracting, reusing or repackaging any of its code, artwork, interface
+     layouts, configuration or text in another project, whether or not that
+     project is public.
+  4. Selling it, licensing it, or bundling it with anything sold or monetised.
+  5. Training machine learning models on it.
+  6. Removing, obscuring or altering this notice or the authorship of the work.
+
+Permission is granted only in writing, only by the copyright holder, and only
+for the specific use described in the request. Ask by opening an issue at
+https://github.com/HexagonUBI/GMod-RollerFight
+
+
+THIRD PARTY CONTENT
+
+Half-Life 2 models, materials, sounds and music are the property of Valve
+Corporation. None of it is redistributed here. The gamemode loads that content
+at runtime from the player's own Half-Life 2 installation. This notice covers
+only the work authored by the copyright holder.
+
+
+NO WARRANTY
+
+The software is provided as is, without warranty of any kind, express or
+implied. The copyright holder is not liable for any claim, damage or other
+liability arising from the software or its use.

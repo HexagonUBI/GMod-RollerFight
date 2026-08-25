@@ -20,6 +20,7 @@ function ENT:Initialize()
 	self.LastThink = CurTime()
 	self.Drain = 0
 	self.NextHeal = 0
+	self.HealPool = 0
 
 	self:SetEnergy(RF.Get("MaxEnergy"))
 	self:SetAttackMode(false)
@@ -349,9 +350,20 @@ function ENT:UpdateHealth(dt)
 	if CurTime() < (self.NextHeal or 0) then return end
 
 	local max = self:GetMaxHealth()
-	if self:Health() >= max then return end
 
-	self:SetHealth(math.min(max, self:Health() + rate * dt))
+	if self:Health() >= max then
+		self.HealPool = 0
+		return
+	end
+
+	self.HealPool = (self.HealPool or 0) + rate * dt
+
+	local whole = math.floor(self.HealPool)
+	if whole < 1 then return end
+
+	self.HealPool = self.HealPool - whole
+
+	self:SetHealth(math.min(max, self:Health() + whole))
 end
 
 function ENT:Think()
@@ -545,6 +557,7 @@ function ENT:OnTakeDamage(dmg)
 	if self:GetBuried() or self.Detonating then return end
 
 	self.NextHeal = CurTime() + RF.Get("HealthRegenDelay")
+	self.HealPool = 0
 
 	local inflictor = dmg:GetInflictor()
 
