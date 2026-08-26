@@ -152,6 +152,11 @@ def check_materials():
     for name in re.findall(r'=\s*"(\w+)"', block):
         refs.add("rollerfight/feed/%s.png" % name)
 
+    # achievement icons are built from RF.Achievements
+    ach = io.open(os.path.join(GAMEMODE, "gamemode", "sh_achievements.lua"), encoding="utf-8").read()
+    for name in re.findall(r'icon\s*=\s*"(\w+)"', ach):
+        refs.add("rollerfight/ach/%s.png" % name)
+
     for ref in sorted(refs):
         if not os.path.isfile(os.path.join(ROOT, "materials", ref)):
             fail("missing material %s" % ref)

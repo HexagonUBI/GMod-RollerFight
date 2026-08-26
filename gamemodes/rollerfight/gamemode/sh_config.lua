@@ -196,7 +196,7 @@ RF.VarList = {
 	{ key = "RoundsPerMatch", group = "Round", label = "Rounds Per Match", default = 5, min = 1, max = 20 },
 	{ key = "MapVote", group = "Round", label = "Map Vote After Match", default = 1, min = 0, max = 1 },
 	{ key = "MapVoteTime", group = "Round", label = "Map Vote Length", default = 25, min = 5, max = 120 },
-	{ key = "MapVoteChoices", group = "Round", label = "Most Maps On The Vote", default = 32, min = 2, max = 64 },
+	{ key = "MapVoteChoices", group = "Round", label = "Map Vote Cap (0 all)", default = 0, min = 0, max = 256 },
 
 	{ key = "CameraDistance", group = "Camera", label = "Camera Distance", default = 95, min = 40, max = 400, realm = "client" },
 	{ key = "CameraHeight", group = "Camera", label = "Camera Height", default = 22, min = -50, max = 150, realm = "client" },

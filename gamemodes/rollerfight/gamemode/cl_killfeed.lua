@@ -60,6 +60,8 @@ net.Receive("rf_kill", function()
 		entry.Assisted = entry.Assist == nick
 	end
 
+	if RF.StatKill then RF.StatKill(entry) end
+
 	Push(entry)
 end)
 

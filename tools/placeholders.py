@@ -144,6 +144,100 @@ def ic_pause(d, s, accent):
     d.rectangle([s * 0.57, s * 0.24, s * 0.72, s * 0.76], fill=accent)
 
 
+def ach(path, painter, size=64, accent=(238, 130, 32, 255)):
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle([1, 1, size - 2, size - 2], radius=10, fill=(26, 26, 28, 255),
+                        outline=(70, 70, 70, 255))
+    painter(d, size, accent)
+    img.save(path, optimize=True)
+    print("  %-26s %dx%d" % (os.path.basename(path), size, size))
+
+
+def ah_roll(d, s, a):
+    mine(d, s // 2, s // 2, int(s * 0.24), a)
+
+
+def ah_kill(d, s, a):
+    mine(d, s // 2, s // 2, int(s * 0.22), a)
+    d.line([(s * 0.2, s * 0.2), (s * 0.8, s * 0.8)], fill=(230, 70, 60, 255), width=5)
+
+
+def ah_wreck(d, s, a):
+    mine(d, int(s * 0.36), int(s * 0.42), int(s * 0.16), a)
+    mine(d, int(s * 0.66), int(s * 0.62), int(s * 0.16), a)
+
+
+def ah_demo(d, s, a):
+    for cx, cy in ((0.3, 0.34), (0.66, 0.34), (0.48, 0.66)):
+        mine(d, int(s * cx), int(s * cy), int(s * 0.13), a)
+
+
+def ah_km(d, s, a):
+    d.arc([s * 0.16, s * 0.16, s * 0.84, s * 0.84], 200, 340, fill=a, width=5)
+    d.line([(s * 0.5, s * 0.62), (s * 0.68, s * 0.36)], fill=a, width=5)
+    d.ellipse([s * 0.44, s * 0.56, s * 0.56, s * 0.68], fill=a)
+
+
+def ah_haul(d, s, a):
+    ah_km(d, s, a)
+    d.line([(s * 0.2, s * 0.82), (s * 0.8, s * 0.82)], fill=a, width=4)
+
+
+def ah_speed(d, s, a):
+    mine(d, int(s * 0.62), s // 2, int(s * 0.18), a, spikes=False)
+    for i, y in enumerate((0.38, 0.5, 0.62)):
+        d.line([(s * (0.1 + i * 0.03), s * y), (s * 0.38, s * y)], fill=a, width=4)
+
+
+def ah_spikes(d, s, a):
+    mine(d, s // 2, s // 2, int(s * 0.2), a)
+
+
+def ah_dig(d, s, a):
+    d.rectangle([s * 0.12, s * 0.58, s * 0.88, s * 0.88], fill=(60, 48, 34, 255))
+    mine(d, s // 2, int(s * 0.62), int(s * 0.17), a, spikes=False)
+    d.line([(s * 0.12, s * 0.58), (s * 0.88, s * 0.58)], fill=a, width=4)
+
+
+def ah_water(d, s, a):
+    d.polygon([(s * 0.5, s * 0.14), (s * 0.76, s * 0.58), (s * 0.24, s * 0.58)], fill=a)
+    d.ellipse([s * 0.24, s * 0.4, s * 0.76, s * 0.86], fill=a)
+    d.ellipse([s * 0.38, s * 0.52, s * 0.62, s * 0.76], fill=(26, 26, 28, 255))
+
+
+def ah_empty(d, s, a):
+    d.rectangle([s * 0.18, s * 0.4, s * 0.76, s * 0.6], outline=a, width=4)
+    d.rectangle([s * 0.78, s * 0.46, s * 0.84, s * 0.54], fill=a)
+    d.rectangle([s * 0.22, s * 0.44, s * 0.34, s * 0.56], fill=(230, 70, 60, 255))
+
+
+def ah_survive(d, s, a):
+    mine(d, s // 2, int(s * 0.56), int(s * 0.18), a)
+    d.polygon([(s * 0.5, s * 0.1), (s * 0.58, s * 0.26), (s * 0.42, s * 0.26)], fill=a)
+
+
+def ah_veteran(d, s, a):
+    for i in range(3):
+        y = s * (0.28 + i * 0.16)
+        d.polygon([(s * 0.2, y + s * 0.1), (s * 0.5, y - s * 0.04), (s * 0.8, y + s * 0.1),
+                   (s * 0.5, y + s * 0.04)], fill=a)
+
+
+def ah_assist(d, s, a):
+    mine(d, int(s * 0.34), int(s * 0.5), int(s * 0.15), a, spikes=False)
+    mine(d, int(s * 0.66), int(s * 0.5), int(s * 0.15), SHAPE, spikes=False)
+    d.line([(s * 0.42, s * 0.5), (s * 0.58, s * 0.5)], fill=a, width=4)
+
+
+ACHIEVEMENTS = (
+    ("roll", ah_roll), ("kill", ah_kill), ("wreck", ah_wreck), ("demo", ah_demo),
+    ("km", ah_km), ("haul", ah_haul), ("speed", ah_speed), ("spikes", ah_spikes),
+    ("dig", ah_dig), ("water", ah_water), ("empty", ah_empty), ("survive", ah_survive),
+    ("veteran", ah_veteran), ("assist", ah_assist),
+)
+
+
 def main():
     os.makedirs(UI, exist_ok=True)
 
@@ -158,6 +252,12 @@ def main():
     icon(os.path.join(UI, "ph_training.png"), 48, "training", ic_training, (238, 130, 32, 255))
     icon(os.path.join(UI, "ph_spectate.png"), 48, "spectate", ic_spectate, (150, 170, 220, 255))
     icon(os.path.join(UI, "ph_pause.png"), 48, "pause", ic_pause, (238, 130, 32, 255))
+
+    print("achievement icons")
+    achdir = os.path.join(MATS, "ach")
+    os.makedirs(achdir, exist_ok=True)
+    for name, painter in ACHIEVEMENTS:
+        ach(os.path.join(achdir, name + ".png"), painter)
 
     print("killfeed icons")
     feed = os.path.join(MATS, "feed")

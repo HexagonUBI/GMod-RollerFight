@@ -52,7 +52,22 @@ end
 
 Hud.BuildFonts()
 
-hook.Add("OnScreenSizeChanged", "RF.HudFonts", Hud.BuildFonts)
+function Hud.Remeasure()
+	Hud.Metric = {}
+
+	timer.Simple(0.5, function()
+		RF.HudDigitMetric("RFHudBig")
+		RF.HudDigitMetric("RFHudHuge")
+		RF.HudDigitMetric("RFHudMini")
+	end)
+end
+
+hook.Add("InitPostEntity", "RF.HudMetrics", Hud.Remeasure)
+
+hook.Add("OnScreenSizeChanged", "RF.HudFonts", function()
+	Hud.BuildFonts()
+	Hud.Remeasure()
+end)
 
 local function Panel(x, y, w, h, col)
 	draw.RoundedBox(S(4), x, y, w, h, col or Hud.BG)
@@ -70,43 +85,101 @@ local function Glow(text, font, x, y, col, xalign, yalign)
 	draw.SimpleText(text, font, x, y, col, xalign, yalign)
 end
 
-Hud.DigitTop = 0.226
-Hud.DigitCap = 0.586
+Hud.Metric = {}
 
-function RF.HudClock(left, x, y, col)
+function RF.HudDigitMetric(font)
+	local cached = Hud.Metric[font]
+
+	if cached then return cached end
+
+	local metric = { top = 0.22, cap = 0.60 }
+
+	surface.SetFont(font)
+
+	local wide, tall = surface.GetTextSize("8")
+	local size = math.Clamp(math.ceil(tall * 1.6), 24, 512)
+	local rt = GetRenderTarget("rf_metric_" .. size, size, size)
+
+	render.PushRenderTarget(rt)
+
+	pcall(function()
+		render.Clear(0, 0, 0, 255)
+
+		cam.Start2D()
+			draw.SimpleText("8", font, 2, 0, color_white, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+		cam.End2D()
+
+		render.CapturePixels()
+
+		local first, last
+		local right = math.min(size - 1, wide + 4)
+
+		for y = 0, size - 1 do
+			for x = 2, right do
+				if render.ReadPixel(x, y) > 60 then
+					if not first then first = y end
+
+					last = y
+					break
+				end
+			end
+		end
+
+		if first and last and last > first then
+			metric.top = first / tall
+			metric.cap = (last - first + 1) / tall
+		end
+	end)
+
+	render.PopRenderTarget()
+
+	Hud.Metric[font] = metric
+
+	return metric
+end
+
+function RF.HudNumber(text, font, x, cy, col, xalign)
+	surface.SetFont(font)
+
+	local _, tall = surface.GetTextSize(text)
+	local m = RF.HudDigitMetric(font)
+
+	Glow(text, font, x, cy - m.cap * tall * 0.5 - m.top * tall, col,
+		xalign or TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+end
+
+function RF.HudClock(left, x, cy, col)
 	local mins = string.format("%d", math.floor(left / 60))
 	local secs = string.format("%02d", math.floor(left % 60))
 
 	surface.SetFont("RFHudBig")
 
 	local secsW, tall = surface.GetTextSize(secs)
-	local cap = tall * Hud.DigitCap
-	local top = y + tall * Hud.DigitTop
-	local dot = math.max(2, math.floor(cap * 0.14))
-	local slot = dot * 4
+	local m = RF.HudDigitMetric("RFHudBig")
+	local cap = m.cap * tall
+	local top = cy - cap * 0.5
+	local cell = top - m.top * tall
+
+	local dot = math.max(2, math.floor(cap * 0.155))
+	local slot = math.max(dot * 3, math.floor(cap * 0.42))
 	local colonX = math.floor(x - secsW - slot + (slot - dot) * 0.5)
 
-	Glow(secs, "RFHudBig", x, y, col, TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP)
-	Glow(mins, "RFHudBig", x - secsW - slot, y, col, TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP)
+	Glow(secs, "RFHudBig", x, cell, col, TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP)
+	Glow(mins, "RFHudBig", x - secsW - slot, cell, col, TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP)
 
 	surface.SetDrawColor(col)
-	surface.DrawRect(colonX, math.floor(top + cap * 0.30 - dot * 0.5), dot, dot)
-	surface.DrawRect(colonX, math.floor(top + cap * 0.78 - dot * 0.5), dot, dot)
+	surface.DrawRect(colonX, math.floor(top + cap * 0.24), dot, dot)
+	surface.DrawRect(colonX, math.floor(top + cap * 0.76 - dot), dot, dot)
 end
 
 local function DigitBlock(text, font, cx, top, height, col)
-	surface.SetFont(font)
-
-	local _, tall = surface.GetTextSize(text)
-
-	Glow(text, font, cx, top + (height - tall * Hud.DigitCap) * 0.5 - tall * Hud.DigitTop, col,
-		TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+	RF.HudNumber(text, font, cx, top + height * 0.5, col, TEXT_ALIGN_CENTER)
 end
 
 local function StatBox(x, y, w, h, label, value, col)
 	Panel(x, y, w, h)
 	Tag(label, x + S(8), y + h - S(7))
-	Glow(tostring(value), "RFHudBig", x + w - S(8), y + S(1), col, TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP)
+	RF.HudNumber(tostring(value), "RFHudBig", x + w - S(8), y + h * 0.42, col, TEXT_ALIGN_RIGHT)
 end
 
 local function WordBox(x, y, w, h, label, word, note, col)
@@ -199,7 +272,7 @@ local function TeamChip(x, y, w, h, id, label)
 
 	Panel(x, y, w, h)
 	Tag(label, x + S(7), y + h - S(6), col)
-	Glow(tostring(TeamScore(id)), "RFHudBig", x + w - S(7), y + S(1), col, TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP)
+	RF.HudNumber(tostring(TeamScore(id)), "RFHudBig", x + w - S(7), y + h * 0.42, col, TEXT_ALIGN_RIGHT)
 end
 
 local function RoundStrip()
@@ -213,8 +286,8 @@ local function RoundStrip()
 
 		Panel(x, y, w, h)
 		Tag("MATCH STARTS IN", x + S(8), y + h - S(6))
-		Glow(tostring(math.ceil(math.max(0, auto - CurTime()))), "RFHudBig",
-			x + w - S(8), y + S(1), Hud.FG, TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP)
+		RF.HudNumber(tostring(math.ceil(math.max(0, auto - CurTime()))), "RFHudBig",
+			x + w - S(8), y + h * 0.42, Hud.FG, TEXT_ALIGN_RIGHT)
 
 		return
 	end
@@ -222,8 +295,8 @@ local function RoundStrip()
 	if state == RF.STATE_TEAMPICK then
 		Panel(x, y, w, h)
 		Tag("CHOOSING TEAMS", x + S(8), y + h - S(6))
-		Glow(tostring(math.ceil(RF.StateTimeLeft())), "RFHudBig",
-			x + w - S(8), y + S(1), Hud.FG, TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP)
+		RF.HudNumber(tostring(math.ceil(RF.StateTimeLeft())), "RFHudBig",
+			x + w - S(8), y + h * 0.42, Hud.FG, TEXT_ALIGN_RIGHT)
 
 		return
 	end
@@ -238,7 +311,7 @@ local function RoundStrip()
 
 	Panel(x, y, w, h)
 	Tag(label, x + S(8), y + h - S(6))
-	RF.HudClock(left, x + w - S(8), y + S(1), left < 30 and Hud.CAUTION or Hud.FG)
+	RF.HudClock(left, x + w - S(8), y + h * 0.42, left < 30 and Hud.CAUTION or Hud.FG)
 
 	if not RF.GetGameType().teams then return end
 

@@ -541,7 +541,7 @@ function Score.Open()
 	Board:SetSizable(false)
 	Board:MakePopup()
 	Board:SetKeyboardInputEnabled(false)
-	Board.Think = RF.PanelPause
+	RF.PanelPause(Board)
 
 	Board.Paint = function(self, pw, ph)
 		Box(0, 0, pw, ph, COL_BG)
@@ -552,12 +552,13 @@ function Score.Open()
 		local thumb = RF.MapThumb(game.GetMap())
 
 		if thumb then
-			local from = math.floor(pw * 0.58)
+			local tile = 232
+			local from = pw - tile
 
 			surface.SetDrawColor(255, 255, 255, 255)
-			RF.DrawCover(thumb, from, 0, pw - from, 96)
-			Box(from, 0, pw - from, 96, Color(6, 6, 8, 100))
-			RF.FadeX(from, 0, math.floor((pw - from) * 0.6), 96, Color(10, 10, 10, 255))
+			RF.DrawCover(thumb, from, 0, tile, 96)
+			Box(from, 0, tile, 96, Color(6, 6, 8, 85))
+			RF.FadeX(from, 0, 96, 96, Color(10, 10, 10, 255), false, 96)
 		else
 			surface.SetDrawColor(255, 255, 255, 70)
 			surface.SetMaterial(RF.Mat("rollerfight/sb_header.png"))
@@ -589,7 +590,7 @@ function Score.Open()
 		draw.SimpleText(string.upper(state), "RFHudTag", pw - 20, 24, RF.Hud.LABEL, TEXT_ALIGN_RIGHT, 0)
 
 		if left > 0 then
-			RF.HudClock(left, pw - 20, 42, left < 30 and RF.Hud.CAUTION or RF.Hud.FG)
+			RF.HudClock(left, pw - 20, 62, left < 30 and RF.Hud.CAUTION or RF.Hud.FG)
 		end
 
 	end

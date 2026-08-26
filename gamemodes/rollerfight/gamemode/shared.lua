@@ -11,6 +11,7 @@ include("sh_teams.lua")
 include("sh_compat.lua")
 include("sh_movement.lua")
 include("sh_round.lua")
+include("sh_achievements.lua")
 
 function RF.IsAdmin(ply)
 	if not IsValid(ply) then return false end

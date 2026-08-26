@@ -148,8 +148,8 @@ function RF.DrawCover(mat, x, y, w, h)
 	surface.DrawTexturedRectUV(x, y, w, h, u, v, 1 - u, 1 - v)
 end
 
-function RF.FadeX(x, y, w, h, col, flip)
-	local steps = 44
+function RF.FadeX(x, y, w, h, col, flip, want)
+	local steps = want or math.Clamp(math.floor(w / 2), 12, 160)
 	local step = w / steps
 
 	for i = 0, steps - 1 do
@@ -162,8 +162,8 @@ function RF.FadeX(x, y, w, h, col, flip)
 	end
 end
 
-function RF.FadeY(x, y, w, h, col, flip)
-	local steps = 32
+function RF.FadeY(x, y, w, h, col, flip, want)
+	local steps = want or math.Clamp(math.floor(h / 2), 10, 96)
 	local step = h / steps
 
 	for i = 0, steps - 1 do
@@ -232,17 +232,29 @@ function RF.DeferRebuild(list)
 	end)
 end
 
+RF.PausePanels = {}
+
 function RF.PanelPause(panel)
+	table.insert(RF.PausePanels, panel)
+end
+
+hook.Add("Think", "RF.PanelPause", function()
 	local paused = gui.IsGameUIVisible()
 
-	if panel.RFPaused == paused then return end
+	for index = #RF.PausePanels, 1, -1 do
+		local panel = RF.PausePanels[index]
 
-	panel.RFPaused = paused
+		if not IsValid(panel) then
+			table.remove(RF.PausePanels, index)
+		elseif panel.RFPaused ~= paused then
+			panel.RFPaused = paused
 
-	panel:SetMouseInputEnabled(not paused)
-	panel:SetKeyboardInputEnabled(false)
-	panel:SetVisible(not paused)
-end
+			panel:SetMouseInputEnabled(not paused)
+			panel:SetKeyboardInputEnabled(false)
+			panel:SetVisible(not paused)
+		end
+	end
+end)
 
 function RF.StyleButton(btn, accent)
 	btn:SetFont("RFHead")
@@ -602,7 +614,7 @@ function Lobby.Open()
 	Panel:SetKeyboardInputEnabled(false)
 
 
-	Panel.Think = RF.PanelPause
+	RF.PanelPause(Panel)
 
 	Panel.Paint = function(self, pw, ph)
 		RF.Box(0, 0, pw, ph, U.BG)
@@ -656,7 +668,7 @@ function Lobby.Open()
 
 	local train = row:Add("DButton")
 	train:Dock(LEFT)
-	train:SetWide(440)
+	train:SetWide(300)
 	train:SetText("TRAINING MODE")
 	RF.StyleButton(train, false)
 
@@ -667,6 +679,18 @@ function Lobby.Open()
 	train.DoClick = function()
 		surface.PlaySound("buttons/button14.wav")
 		Lobby.Send("rf_training")
+	end
+
+	local profile = row:Add("DButton")
+	profile:Dock(LEFT)
+	profile:SetWide(220)
+	profile:DockMargin(8, 0, 0, 0)
+	profile:SetText("STATS AND ACHIEVEMENTS")
+	RF.StyleButton(profile, false)
+
+	profile.DoClick = function()
+		surface.PlaySound("buttons/button14.wav")
+		RF.Stats.Open()
 	end
 
 	local force = row:Add("DButton")

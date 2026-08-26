@@ -32,9 +32,9 @@ end
 
 function RF.PickMapChoices()
 	local pool = RF.MapPool()
-	local cap = math.Clamp(math.floor(RF.Get("MapVoteChoices")), 2, 64)
+	local cap = math.floor(RF.Get("MapVoteChoices"))
 
-	if #pool <= cap then return pool end
+	if cap <= 0 or #pool <= cap then return pool end
 
 	table.Shuffle(pool)
 
@@ -51,7 +51,7 @@ end
 
 function RF.SendMapChoices(ply)
 	net.Start("rf_mapvote")
-	net.WriteUInt(#RF.MapChoices, 7)
+	net.WriteUInt(#RF.MapChoices, 9)
 
 	for _, map in ipairs(RF.MapChoices) do
 		net.WriteString(map)
@@ -86,7 +86,7 @@ function RF.SendMapTally()
 
 	for _, entry in ipairs(list) do
 		net.WriteEntity(entry[1])
-		net.WriteUInt(entry[2], 7)
+		net.WriteUInt(entry[2], 9)
 	end
 
 	net.Broadcast()
@@ -155,7 +155,7 @@ end
 net.Receive("rf_mapvote_pick", function(len, ply)
 	if RF.GetState() ~= RF.STATE_MAPVOTE then return end
 
-	local index = net.ReadUInt(7)
+	local index = net.ReadUInt(9)
 	if index < 1 or index > #RF.MapChoices + 1 then return end
 	if RF.MapVotes[ply] == index then return end
 

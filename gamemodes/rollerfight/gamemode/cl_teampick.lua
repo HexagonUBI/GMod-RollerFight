@@ -102,7 +102,7 @@ function Pick.Open()
 	Panel:MakePopup()
 	Panel:SetKeyboardInputEnabled(false)
 
-	Panel.Think = RF.PanelPause
+	RF.PanelPause(Panel)
 
 	Panel.Paint = function(self, pw, ph)
 		RF.Box(0, 0, pw, ph, U.BG)
